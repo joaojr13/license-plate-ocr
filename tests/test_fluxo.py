@@ -10,7 +10,8 @@ from examples.gerar_exemplo import criar_veiculo
 from placas.imagem import ler_imagem
 from placas.etapas import e7_ocr as ocr
 from placas.modelos import Caractere
-from placas.etapas.e6_recortes import preparar_caractere, validar_segmentacao
+from placas.etapas.e6_normalizacao import preparar_caractere
+from placas.validacao import validar_segmentacao
 from placas.pipeline import localizar, reconhecer
 
 

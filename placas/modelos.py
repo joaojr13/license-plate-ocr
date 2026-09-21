@@ -50,6 +50,17 @@ class Localizacao:
 
 
 @dataclass
+class EntradaCinza:
+    """Recorte em tons de cinza acompanhado do componente que o originou.
+
+    A referência é a máscara binária do mesmo caractere. Ela não vai ao OCR:
+    serve para provar que o recorte em cinza tem a mesma geometria validada.
+    """
+    imagem: np.ndarray
+    referencia: np.ndarray
+
+
+@dataclass
 class TentativaOCR:
     variacao: str
     caractere: str

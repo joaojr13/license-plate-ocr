@@ -7,7 +7,8 @@ import pytest
 from placas.etapas import e7_ocr as ocr
 from placas.modelos import Leitura, TentativaOCR
 from placas.pipeline import localizar, reconhecer
-from placas.etapas.e6_recortes import preparar_cinza, validar_entrada_cinza
+from placas.etapas.e6_recortes import preparar_cinza
+from placas.validacao import validar_entrada_cinza
 from placas.saida.exportacao import imagens_das_tentativas
 
 
@@ -46,10 +47,10 @@ def test_cinza_consenso_e_exportacao(monkeypatch, segmentacao, respostas, espera
 
 
 def test_cinza_rejeita_placa_completa(segmentacao):
-    imagem, referencia = preparar_cinza(segmentacao)[2]['cinza_margem_20']
-    validar_entrada_cinza(imagem, referencia)
+    entrada = preparar_cinza(segmentacao)[2]['cinza_margem_20']
+    validar_entrada_cinza(entrada.imagem, entrada.referencia)
     with pytest.raises(ValueError):
-        validar_entrada_cinza(segmentacao.placa, referencia)
+        validar_entrada_cinza(segmentacao.placa, entrada.referencia)
 
 
 def test_leitura_aceita_nao_dispara_cinza(monkeypatch):

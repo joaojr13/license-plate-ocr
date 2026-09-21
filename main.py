@@ -6,7 +6,8 @@ import sys
 
 import cv2
 
-from placas.etapas.e6_recortes import preparar_caractere, preparar_recortes
+from placas.etapas.e6_normalizacao import preparar_caractere
+from placas.etapas.e6_recortes import preparar_recortes
 from placas.imagem import ler_imagem
 from placas.pipeline import localizar, reconhecer
 from placas.saida.exportacao import imagens_das_tentativas

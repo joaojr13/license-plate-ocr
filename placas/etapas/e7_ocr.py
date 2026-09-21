@@ -9,8 +9,8 @@ from placas.config import (CONFIANCA_MINIMA, FORMATOS, IDIOMA_OCR,
                            MINIMO_DE_CONCORDANCIAS, MODO_OEM, PSM_CARACTERE_UNICO,
                            PSM_LINHA_CRUA, TEMPO_LIMITE_OCR, TOTAL_CARACTERES)
 from placas.modelos import Leitura, TentativaOCR
-from placas.etapas.e6_recortes import (gerar_variacoes, validar_entrada_cinza,
-                                       validar_entrada_ocr)
+from placas.etapas.e6_variacoes import gerar_variacoes
+from placas.validacao import validar_entrada_cinza, validar_entrada_ocr
 
 ALFABETO = string.ascii_uppercase + string.digits
 
@@ -74,8 +74,9 @@ def recuperar_com_cinza(leitura: Leitura, variacoes: dict, permitidos: str = ALF
     if leitura.caractere != '?':
         return leitura
     novas = []
-    for nome, (imagem, referencia) in variacoes.items():
-        resposta = reconhecer_caractere(imagem, permitidos, referencia_binaria=referencia)
+    for nome, entrada in variacoes.items():
+        resposta = reconhecer_caractere(entrada.imagem, permitidos,
+                                        referencia_binaria=entrada.referencia)
         novas.append(TentativaOCR(nome, resposta.caractere, resposta.bruto, resposta.confianca))
     historico = leitura.tentativas + novas
     fortes = [t for t in novas if t.caractere != '?' and t.confianca >= CONFIANCA_MINIMA]

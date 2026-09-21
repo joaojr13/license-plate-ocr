@@ -6,7 +6,9 @@ import pytest
 from examples.gerar_exemplo import criar_veiculo
 from placas.etapas import e7_ocr as ocr
 from placas.saida.exportacao import imagens_das_tentativas
-from placas.etapas.e6_recortes import gerar_variacoes, preparar_caractere, validar_entrada_ocr
+from placas.etapas.e6_normalizacao import preparar_caractere
+from placas.etapas.e6_variacoes import gerar_variacoes
+from placas.validacao import validar_entrada_ocr
 from placas.pipeline import localizar, reconhecer
 
 

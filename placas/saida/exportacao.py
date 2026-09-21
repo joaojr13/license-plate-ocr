@@ -2,8 +2,8 @@
 import numpy as np
 
 from placas.modelos import Segmentacao
-from placas.etapas.e6_recortes import (gerar_variacoes, preparar_cinza,
-                                       preparar_recortes)
+from placas.etapas.e6_recortes import preparar_cinza, preparar_recortes
+from placas.etapas.e6_variacoes import gerar_variacoes
 
 
 def imagens_das_tentativas(segmentacao: Segmentacao, resultado: dict) -> dict[str, np.ndarray]:
@@ -17,7 +17,8 @@ def imagens_das_tentativas(segmentacao: Segmentacao, resultado: dict) -> dict[st
             nome = tentativa["variacao"]
             sufixo = "_psm13" if tentativa.get("psm", 10) == 13 else ""
             if nome.startswith('cinza_'):
-                imagens[f"caractere_{indice:02}_tesseract_{nome}{sufixo}.png"] = cinzas[indice-1][nome][0]
+                imagens[f"caractere_{indice:02}_tesseract_{nome}{sufixo}.png"] = (
+                    cinzas[indice - 1][nome].imagem)
                 continue
             imagens[f"caractere_{indice:02}_tesseract_{nome}{sufixo}.png"] = variacoes[nome]
     return imagens
