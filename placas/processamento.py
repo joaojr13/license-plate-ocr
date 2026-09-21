@@ -7,6 +7,7 @@ import numpy as np
 from placas import ocr
 
 from placas.bordas import encontrar_bordas
+from placas.config import NOME_DO_MOTOR
 from placas.localizacao import selecionar_placa
 from placas.modelos import Localizacao, Segmentacao
 from placas.morfologia import aplicar_morfologia
@@ -33,5 +34,5 @@ def reconhecer(segmentacao: Segmentacao, formato: str = "livre") -> dict:
             leituras[indice] = ocr.recuperar_com_cinza(
                 leitura, cinzas[indice], ocr.alfabeto_por_posicao(indice, formato))
     resultado = consolidar_resultado(leituras, formato)
-    resultado["motor"] = "tesseract"
+    resultado["motor"] = NOME_DO_MOTOR
     return resultado            # 8 · Arrays e resultado

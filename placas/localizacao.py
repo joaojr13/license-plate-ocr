@@ -2,6 +2,13 @@
 import cv2
 import numpy as np
 
+from placas.config import (ALTURA_MINIMA_CANDIDATA, ALTURA_MINIMA_FAIXA_DE_LETRAS,
+                           AREA_RELATIVA_CANDIDATA, LARGURA_MINIMA_CANDIDATA,
+                           MARGEM_EXTRA_HORIZONTAL, MARGEM_EXTRA_VERTICAL,
+                           MAXIMO_CANDIDATAS_EXIBIDAS, MAXIMO_CONTORNOS,
+                           MINIMO_COMPONENTES_CANDIDATA, OPERACOES_MORFOLOGIA,
+                           PROPORCAO_CANDIDATA, SOBREPOSICAO_MAXIMA_EXIBIDA,
+                           TAMANHOS_KERNEL_MORFOLOGIA)
 from placas.modelos import Box, CandidataPlaca, ImagemPreparada, Localizacao
 from placas.segmentacao import segmentar
 
@@ -18,9 +25,10 @@ def candidatas_para_exibir(candidatas: list[CandidataPlaca], escolhida: Box) -> 
     ordenadas = sorted(candidatas, key=lambda c: (c.caixa == escolhida, c.qualidade), reverse=True)
     distintas = []
     for candidata in ordenadas:
-        if all(_sobreposicao(candidata.caixa, outra.caixa) < 0.5 for outra in distintas):
+        if all(_sobreposicao(candidata.caixa, outra.caixa) < SOBREPOSICAO_MAXIMA_EXIBIDA
+               for outra in distintas):
             distintas.append(candidata)
-        if len(distintas) == 5:
+        if len(distintas) == MAXIMO_CANDIDATAS_EXIBIDAS:
             break
     return distintas
 
@@ -29,17 +37,21 @@ def _caixas(mask: np.ndarray, expandir: bool = False) -> list[Box]:
     altura, largura = mask.shape
     contornos, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     caixas = []
-    for contorno in sorted(contornos, key=cv2.contourArea, reverse=True)[:250]:
+    for contorno in sorted(contornos, key=cv2.contourArea, reverse=True)[:MAXIMO_CONTORNOS]:
         x, y, w, h = cv2.boundingRect(contorno)
         # Uma faixa de letras tem menos altura que a placa com suas margens.
-        altura_minima = 10 if expandir else 18
-        if not (2.0 <= w / h <= 6.5 and w >= 70 and h >= altura_minima):
+        altura_minima = (ALTURA_MINIMA_FAIXA_DE_LETRAS if expandir
+                         else ALTURA_MINIMA_CANDIDATA)
+        if not (PROPORCAO_CANDIDATA[0] <= w / h <= PROPORCAO_CANDIDATA[1]
+                and w >= LARGURA_MINIMA_CANDIDATA and h >= altura_minima):
             continue
-        if not 0.0008 <= w * h / (largura * altura) <= 0.60:
+        area_relativa = w * h / (largura * altura)
+        if not AREA_RELATIVA_CANDIDATA[0] <= area_relativa <= AREA_RELATIVA_CANDIDATA[1]:
             continue
         if expandir:
             # O fechamento localiza a faixa das letras; acrescenta margem da placa.
-            dx, dy = round(w * 0.06), round(h * 0.35)
+            dx = round(w * MARGEM_EXTRA_HORIZONTAL)
+            dy = round(h * MARGEM_EXTRA_VERTICAL)
             x1, y1 = max(0, x-dx), max(0, y-dy)
             x2, y2 = min(largura, x+w+dx), min(altura, y+h+dy)
             x, y, w, h = x1, y1, x2-x1, y2-y1
@@ -58,8 +70,8 @@ def selecionar_placa(preparada: ImagemPreparada, bordas: np.ndarray,
     etapas.update(morfologia)
     candidatos = _caixas(bordas)
     candidatas_morfologia = {}
-    for tamanho in [17, 31]:
-        for nome in ["Black-hat", "Top-hat"]:
+    for tamanho in TAMANHOS_KERNEL_MORFOLOGIA:
+        for nome in OPERACOES_MORFOLOGIA:
             mascara = morfologia[f"{nome} · Abertura {tamanho}"]
             # Alguns contornos já abrangem a placa inteira; outros só as letras.
             for expandir, tipo in [(False, 'Sem margem extra'), (True, 'Com margem extra')]:
@@ -79,7 +91,7 @@ def selecionar_placa(preparada: ImagemPreparada, bordas: np.ndarray,
         segmentacao = segmentar(trabalho[y:y+ch, x:x+cw])
         avaliadas.append(CandidataPlaca(caixa, segmentacao.qualidade,
                                         len(segmentacao.caracteres), segmentacao.metodo))
-        if len(segmentacao.caracteres) < 4:
+        if len(segmentacao.caracteres) < MINIMO_COMPONENTES_CANDIDATA:
             continue
         if melhor is None or segmentacao.qualidade > melhor.segmentacao.qualidade:
             melhor = Localizacao(trabalho, caixa, segmentacao, etapas)

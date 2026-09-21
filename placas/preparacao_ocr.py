@@ -2,23 +2,33 @@
 import cv2
 import numpy as np
 
+from placas.config import (ALTURA_CARACTERE, ALTURA_PADRAO_DA_ENTRADA, ALTURAS_VALIDAS,
+                           ANGULO_MAXIMO_CORRIGIVEL, ANGULO_MINIMO_CORRIGIVEL,
+                           AREA_MINIMA_COMPONENTE, KERNEL_AFINAMENTO,
+                           LARGURA_MAXIMA_CARACTERE, LARGURA_MINIMA_CARACTERE,
+                           LARGURA_RELATIVA_COMPONENTE, MARGEM_PADRAO,
+                           MARGEM_PARA_ROTACIONAR, MARGENS_ALTERNATIVAS,
+                           MINIMO_DE_SIMBOLOS_INCLINADOS, PASSO_DO_ANGULO,
+                           PROPORCAO_COMPONENTE, TOTAL_CARACTERES)
 from placas.modelos import Caractere, Segmentacao
 
 
 def validar_segmentacao(segmentacao: Segmentacao) -> None:
     caracteres = segmentacao.caracteres
-    if len(caracteres) != 7:
-        raise ValueError(f"Foram isolados {len(caracteres)} caracteres; são necessários 7. "
+    if len(caracteres) != TOTAL_CARACTERES:
+        raise ValueError(f"Foram isolados {len(caracteres)} caracteres; "
+                         f"são necessários {TOTAL_CARACTERES}. "
                          "OCR bloqueado. Tente uma foto melhor.")
     altura, largura = segmentacao.binaria.shape
     anterior = -1
     for c in caracteres:
         x, y, w, h = c.caixa
         if (x < anterior or x < 0 or y < 0 or x+w > largura or y+h > altura
-                or w > largura * 0.16 or w / h > 1.05 or c.mascara.shape != (h, w)):
+                or w > largura * LARGURA_RELATIVA_COMPONENTE[1]
+                or w / h > PROPORCAO_COMPONENTE[1] or c.mascara.shape != (h, w)):
             raise ValueError("Recortes inválidos ou sobrepostos; OCR bloqueado.")
         n, _, stats, _ = cv2.connectedComponentsWithStats(c.mascara, 8)
-        if n != 2 or stats[1, cv2.CC_STAT_AREA] < 8:
+        if n != 2 or stats[1, cv2.CC_STAT_AREA] < AREA_MINIMA_COMPONENTE:
             raise ValueError("Cada recorte deve conter somente um componente isolado.")
         anterior = x + w
 
@@ -29,14 +39,16 @@ def preparar_caractere(caractere: Caractere) -> np.ndarray:
     if mascara.ndim != 2 or mascara.size == 0:
         raise ValueError("Recorte de caractere inválido.")
     h, w = mascara.shape
-    if not 0.08 <= w / h <= 1.05:
+    if not PROPORCAO_COMPONENTE[0] <= w / h <= PROPORCAO_COMPONENTE[1]:
         raise ValueError("Recorte largo demais para um caractere isolado.")
     n, _ = cv2.connectedComponents(mascara, 8)
     if n != 2:
         raise ValueError("O OCR exige exatamente um componente por recorte.")
-    letra = cv2.resize(255 - mascara, (max(8, round(w * 100 / h)), 100),
+    largura = max(LARGURA_MINIMA_CARACTERE, round(w * ALTURA_CARACTERE / h))
+    letra = cv2.resize(255 - mascara, (largura, ALTURA_CARACTERE),
                        interpolation=cv2.INTER_NEAREST)
-    return cv2.copyMakeBorder(letra, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255)
+    return cv2.copyMakeBorder(letra, MARGEM_PADRAO, MARGEM_PADRAO, MARGEM_PADRAO, MARGEM_PADRAO,
+                              cv2.BORDER_CONSTANT, value=255)
 
 
 def preparar_recortes(segmentacao: Segmentacao) -> list[np.ndarray]:
@@ -61,11 +73,12 @@ def preparar_cinza(segmentacao: Segmentacao) -> list[dict[str, tuple[np.ndarray,
         recorte = cinza[y:y+h, x:x+w]
         if 'caracteres claros' in segmentacao.metodo:
             recorte = 255 - recorte
-        largura = max(8, round(w * 100 / h))
-        letra = cv2.resize(recorte, (largura, 100), interpolation=cv2.INTER_CUBIC)
-        mascara = preparar_caractere(caractere)[20:-20, 20:-20]
+        largura = max(LARGURA_MINIMA_CARACTERE, round(w * ALTURA_CARACTERE / h))
+        letra = cv2.resize(recorte, (largura, ALTURA_CARACTERE),
+                           interpolation=cv2.INTER_CUBIC)
+        mascara = preparar_caractere(caractere)[MARGEM_PADRAO:-MARGEM_PADRAO, MARGEM_PADRAO:-MARGEM_PADRAO]
         variacoes = {}
-        for margem in (10, 20, 30):
+        for margem in MARGENS_ALTERNATIVAS:
             imagem = cv2.copyMakeBorder(letra, margem, margem, margem, margem,
                                        cv2.BORDER_CONSTANT, value=255)
             referencia = cv2.copyMakeBorder(mascara, margem, margem, margem, margem,
@@ -80,7 +93,7 @@ def validar_entrada_cinza(imagem: np.ndarray, referencia: np.ndarray) -> None:
     validar_entrada_ocr(referencia)
     if imagem.dtype != np.uint8 or imagem.shape != referencia.shape:
         raise ValueError('Recorte em cinza incompatível com seu componente individual.')
-    margem = (imagem.shape[0] - 100) // 2
+    margem = (imagem.shape[0] - ALTURA_CARACTERE) // 2
     if not (np.all(imagem[:margem] == 255) and np.all(imagem[-margem:] == 255)
             and np.all(imagem[:, :margem] == 255) and np.all(imagem[:, -margem:] == 255)):
         raise ValueError('Recorte em cinza deve ter margem branca livre.')
@@ -100,17 +113,23 @@ def corrigir_inclinacao(entradas: list[np.ndarray]) -> list[np.ndarray]:
         inclinacao = momentos['mu11'] / momentos['mu02'] if momentos['mu02'] else 0
         angulos.append(float(-np.degrees(np.arctan(inclinacao))))
     mediana = float(np.median(angulos))
-    if (len(entradas) != 7 or not 3 <= abs(mediana) <= 15
-            or sum(a * mediana > 0 and abs(a) >= 3 for a in angulos) < 5):
+    no_mesmo_sentido = sum(a * mediana > 0 and abs(a) >= ANGULO_MINIMO_CORRIGIVEL
+                           for a in angulos)
+    if (len(entradas) != TOTAL_CARACTERES
+            or not ANGULO_MINIMO_CORRIGIVEL <= abs(mediana) <= ANGULO_MAXIMO_CORRIGIVEL
+            or no_mesmo_sentido < MINIMO_DE_SIMBOLOS_INCLINADOS):
         return entradas
     corrigidas = []
     for entrada, angulo in zip(entradas, angulos):
-        if not 3 <= abs(angulo) <= 15 or angulo * mediana <= 0:
+        if (not ANGULO_MINIMO_CORRIGIVEL <= abs(angulo) <= ANGULO_MAXIMO_CORRIGIVEL
+                or angulo * mediana <= 0):
             corrigidas.append(entrada)
             continue
-        angulo = round(angulo / 5) * 5
-        ampliada = cv2.copyMakeBorder(entrada, 40, 40, 40, 40,
-                                     cv2.BORDER_CONSTANT, value=255)
+        angulo = round(angulo / PASSO_DO_ANGULO) * PASSO_DO_ANGULO
+        ampliada = cv2.copyMakeBorder(
+            entrada, MARGEM_PARA_ROTACIONAR, MARGEM_PARA_ROTACIONAR,
+            MARGEM_PARA_ROTACIONAR, MARGEM_PARA_ROTACIONAR,
+            cv2.BORDER_CONSTANT, value=255)
         h, w = ampliada.shape
         matriz = cv2.getRotationMatrix2D((w / 2, h / 2), angulo, 1)
         rotacionada = cv2.warpAffine(ampliada, matriz, (w, h),
@@ -128,11 +147,13 @@ def corrigir_inclinacao(entradas: list[np.ndarray]) -> list[np.ndarray]:
 
 def validar_entrada_ocr(imagem: np.ndarray) -> None:
     """Aceita somente um símbolo binário com altura 100 e margem conhecida."""
-    if imagem.ndim != 2 or imagem.dtype != np.uint8 or imagem.shape[0] not in (120, 140, 160):
+    if (imagem.ndim != 2 or imagem.dtype != np.uint8
+            or imagem.shape[0] not in ALTURAS_VALIDAS):
         raise ValueError("O OCR aceita somente um recorte preparado na etapa 6.")
-    margem = (imagem.shape[0] - 100) // 2
+    margem = (imagem.shape[0] - ALTURA_CARACTERE) // 2
     largura = imagem.shape[1] - 2 * margem
-    if not 8 <= largura <= 105 or not np.all((imagem == 0) | (imagem == 255)):
+    if (not LARGURA_MINIMA_CARACTERE <= largura <= LARGURA_MAXIMA_CARACTERE
+            or not np.all((imagem == 0) | (imagem == 255))):
         raise ValueError("O OCR aceita somente um recorte preparado na etapa 6.")
     if not (np.all(imagem[:margem] == 255) and np.all(imagem[-margem:] == 255)
             and np.all(imagem[:, :margem] == 255) and np.all(imagem[:, -margem:] == 255)):
@@ -150,18 +171,18 @@ def gerar_variacoes(entrada: np.ndarray) -> dict[str, np.ndarray]:
     Variações que fragmentem ou eliminem o caractere não são enviadas ao OCR.
     """
     validar_entrada_ocr(entrada)
-    if entrada.shape[0] != 140:
+    if entrada.shape[0] != ALTURA_PADRAO_DA_ENTRADA:
         raise ValueError("As variações devem partir do recorte padrão com margem 20.")
-    letra = entrada[20:-20, 20:-20]
+    letra = entrada[MARGEM_PADRAO:-MARGEM_PADRAO, MARGEM_PADRAO:-MARGEM_PADRAO]
     candidatas = {"padrao": entrada}
     for afinar in (False, True):
-        for margem in (10, 20, 30):
-            if not afinar and margem == 20:
+        for margem in MARGENS_ALTERNATIVAS:
+            if not afinar and margem == MARGEM_PADRAO:
                 continue
             imagem = cv2.copyMakeBorder(letra, margem, margem, margem, margem,
                                        cv2.BORDER_CONSTANT, value=255)
             if afinar:
-                imagem = cv2.dilate(imagem, np.ones((2, 2), np.uint8))
+                imagem = cv2.dilate(imagem, np.ones(KERNEL_AFINAMENTO, np.uint8))
             nome = f"margem_{margem}" + ("_traco_fino" if afinar else "")
             try:
                 validar_entrada_ocr(imagem)

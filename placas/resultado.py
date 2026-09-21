@@ -2,6 +2,7 @@
 from dataclasses import asdict
 import re
 
+from placas.config import CONFIANCA_MINIMA, PADROES_DE_PLACA
 from placas.modelos import Leitura
 
 
@@ -9,16 +10,11 @@ def consolidar_resultado(leituras: list[Leitura], formato: str = "livre") -> dic
     """Entrada: leituras ordenadas. Saída: texto, arrays e dados para exibição."""
     caracteres = [leitura.caractere for leitura in leituras]
     texto = "".join(caracteres)
-    padroes = {
-        "antiga": r"[A-Z]{3}[0-9]{4}",
-        "mercosul": r"[A-Z]{3}[0-9][A-Z][0-9]{2}",
-        "livre": r"(?:[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})|[A-Z]{4}[0-9]{3})",
-    }
-    padrao_valido = bool(re.fullmatch(padroes[formato], texto))
+    padrao_valido = bool(re.fullmatch(PADROES_DE_PLACA[formato], texto))
     avisos = []
     if "?" in texto:
         avisos.append("Há caracteres não reconhecidos, representados por '?'.")
-    if any(leitura.confianca < 60 for leitura in leituras):
+    if any(leitura.confianca < CONFIANCA_MINIMA for leitura in leituras):
         avisos.append("Há leituras com confiança baixa. Confira os recortes visualmente.")
     if not padrao_valido:
         avisos.append("O texto não corresponde aos padrões de automóvel previstos neste projeto.")

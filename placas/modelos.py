@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from placas.config import NOME_DO_MOTOR, PSM_CARACTERE_UNICO
+
 Box = tuple[int, int, int, int]  # x, y, largura, altura
 
 
@@ -53,8 +55,8 @@ class TentativaOCR:
     caractere: str
     bruto: str
     confianca: float
-    psm: int = 10
-    motor: str = "tesseract"
+    psm: int = PSM_CARACTERE_UNICO
+    motor: str = NOME_DO_MOTOR
 
 
 @dataclass
