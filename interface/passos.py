@@ -4,14 +4,14 @@ Este módulo apenas mostra dados já produzidos. Não executa filtros nem OCR.
 """
 import streamlit as st
 
-from placas.visualizacao import (desenhar_localizacao, desenhar_segmentacao,
-                                desenhar_candidatas, desenhar_regioes_morfologia)
+from placas.saida.visualizacao import (desenhar_candidatas, desenhar_localizacao,
+                                       desenhar_regioes_morfologia, desenhar_segmentacao)
 
 
 def exibir_preparacao(localizacao):
     """Etapa 1 da página."""
     with st.expander("1 · Preparar a imagem", expanded=True):
-        st.caption("Código desta etapa: placas/preparacao.py · preparar_imagem()")
+        st.caption("Código desta etapa: placas/etapas/e1_preparacao.py · preparar_imagem()")
         st.write("A orientação da foto é corrigida quando há informação EXIF. Imagens grandes "
                  "são reduzidas para, no máximo, 1.400 pixels no maior lado, preservando a proporção. "
                  "Depois, a imagem é convertida para cinza e suavizada com um filtro Gaussiano 3×3 "
@@ -25,7 +25,7 @@ def exibir_preparacao(localizacao):
 def exibir_bordas(localizacao):
     """Etapa 2 da página."""
     with st.expander("2 · Encontrar bordas"):
-        st.caption("Código desta etapa: placas/bordas.py · encontrar_bordas()")
+        st.caption("Código desta etapa: placas/etapas/e2_bordas.py · encontrar_bordas()")
         st.write("O detector Canny destaca mudanças de intensidade, que podem indicar limites de objetos. "
                  "Um fechamento 3×3 conecta pequenas falhas nessas bordas. "
                  "Os contornos resultantes geram uma primeira lista de regiões candidatas a placa.")
@@ -36,7 +36,7 @@ def exibir_bordas(localizacao):
 def exibir_morfologia(localizacao):
     """Etapa 3 da página."""
     with st.expander("3 · Aplicar morfologia para gerar outras candidatas"):
-        st.caption("Código desta etapa: placas/morfologia.py · aplicar_morfologia()")
+        st.caption("Código desta etapa: placas/etapas/e3_morfologia.py · aplicar_morfologia()")
         st.write("O black-hat é a diferença entre o fechamento da imagem em cinza e a própria imagem. "
                  "Ele destaca detalhes escuros sobre regiões claras. O top-hat faz a diferença entre "
                  "a imagem e sua abertura, destacando detalhes claros sobre regiões escuras, como os "
@@ -81,7 +81,7 @@ def exibir_localizacao(localizacao):
     """Etapa 4 da página."""
     segmentacao = localizacao.segmentacao
     with st.expander("4 · Escolher e recortar a provável placa"):
-        st.caption("Código desta etapa: placas/localizacao.py · selecionar_placa()")
+        st.caption("Código desta etapa: placas/etapas/e4_localizacao.py · selecionar_placa()")
         st.write("As regiões vindas das bordas e da morfologia são filtradas pelo tamanho e pelo formato: "
                  "os retângulos candidatos precisam ser mais largos que altos, com proporção entre 2 e 6,5 "
                  "antes da adição de margens. As candidatas da morfologia são testadas com e sem margem, "
@@ -149,7 +149,7 @@ def exibir_localizacao(localizacao):
 def exibir_segmentacao(segmentacao):
     """Etapa 5 da página."""
     with st.expander("5 · Binarizar a região e separar os caracteres"):
-        st.caption("Código desta etapa: placas/segmentacao.py · segmentar()")
+        st.caption("Código desta etapa: placas/etapas/e5_segmentacao.py · segmentar()")
         st.write("Voltamos à imagem recortada e criamos uma nova máscara, pois o fechamento anterior pode "
                  "ter unido as letras. São comparadas oito alternativas: Otsu e limiar adaptativo, "
                  "cada um com e sem abertura 2×2, procurando tanto caracteres escuros quanto claros. "
@@ -169,7 +169,7 @@ def exibir_segmentacao(segmentacao):
 def exibir_preparacao_ocr(valida):
     """Etapa 6 da página."""
     with st.expander("6 · Validar e preparar cada recorte para o OCR"):
-        st.caption("Código desta etapa: placas/preparacao_ocr.py · preparar_recortes()")
+        st.caption("Código desta etapa: placas/etapas/e6_recortes.py · preparar_recortes()")
         st.write("São exigidos sete recortes válidos, ordenados e não sobrepostos. Cada máscara contém "
                  "somente o componente selecionado. A letra é convertida para preto sobre branco, "
                  "redimensionada para 100 pixels de altura e recebe uma margem branca de 20 pixels.")
@@ -191,7 +191,7 @@ def exibir_preparacao_ocr(valida):
 def exibir_ocr(formato_label, valida, motor_disponivel, resultado):
     """Etapa 7 da página."""
     with st.expander("7 · Reconhecer uma letra ou número por vez"):
-        st.caption("Código desta etapa: placas/ocr.py · reconhecer_caracteres()")
+        st.caption("Código desta etapa: placas/etapas/e7_ocr.py · reconhecer_caracteres()")
         st.write("Tesseract reconhece cada caractere localmente no modo PSM 10. Leituras incertas "
                  "recebem novos preparos e, quando necessário, uma tentativa no PSM 13. "
                  "Cada chamada recebe apenas um caractere. OpenCV localiza e segmenta a placa.")
@@ -231,7 +231,7 @@ def exibir_ocr(formato_label, valida, motor_disponivel, resultado):
 def exibir_resultado(resultado):
     """Etapa 8 da página."""
     with st.expander("8 · Concatenar, armazenar no array e exibir"):
-        st.caption("Código desta etapa: placas/resultado.py · consolidar_resultado()")
+        st.caption("Código desta etapa: placas/etapas/e8_resultado.py · consolidar_resultado()")
         st.write("Cada resposta aceita ocupa uma posição na lista de caracteres. Respostas vazias, "
                  "com vários símbolos ou fora do alfabeto permitido recebem “?”. Depois, o programa "
                  "junta as posições na ordem de leitura e armazena o texto consolidado na lista de placas.")

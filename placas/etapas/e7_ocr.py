@@ -9,7 +9,8 @@ from placas.config import (CONFIANCA_MINIMA, FORMATOS, IDIOMA_OCR,
                            MINIMO_DE_CONCORDANCIAS, MODO_OEM, PSM_CARACTERE_UNICO,
                            PSM_LINHA_CRUA, TEMPO_LIMITE_OCR, TOTAL_CARACTERES)
 from placas.modelos import Leitura, TentativaOCR
-from placas.preparacao_ocr import gerar_variacoes, validar_entrada_ocr, validar_entrada_cinza
+from placas.etapas.e6_recortes import (gerar_variacoes, validar_entrada_cinza,
+                                       validar_entrada_ocr)
 
 ALFABETO = string.ascii_uppercase + string.digits
 

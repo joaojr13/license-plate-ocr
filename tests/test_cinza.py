@@ -4,11 +4,11 @@ import cv2
 import numpy as np
 import pytest
 
-from placas import ocr
+from placas.etapas import e7_ocr as ocr
 from placas.modelos import Leitura, TentativaOCR
-from placas.processamento import localizar, reconhecer
-from placas.preparacao_ocr import preparar_cinza, validar_entrada_cinza
-from placas.exportacao import imagens_das_tentativas
+from placas.pipeline import localizar, reconhecer
+from placas.etapas.e6_recortes import preparar_cinza, validar_entrada_cinza
+from placas.saida.exportacao import imagens_das_tentativas
 
 
 @pytest.fixture

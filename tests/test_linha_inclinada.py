@@ -3,8 +3,8 @@ import shutil
 import cv2
 import pytest
 
-from placas.processamento import localizar, reconhecer
-from placas.preparacao_ocr import validar_segmentacao
+from placas.pipeline import localizar, reconhecer
+from placas.etapas.e6_recortes import validar_segmentacao
 
 
 @pytest.fixture(scope='module')

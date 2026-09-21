@@ -8,10 +8,10 @@ import pytest
 
 from examples.gerar_exemplo import criar_veiculo
 from placas.imagem import ler_imagem
-from placas import ocr
+from placas.etapas import e7_ocr as ocr
 from placas.modelos import Caractere
-from placas.preparacao_ocr import preparar_caractere, validar_segmentacao
-from placas.processamento import localizar, reconhecer
+from placas.etapas.e6_recortes import preparar_caractere, validar_segmentacao
+from placas.pipeline import localizar, reconhecer
 
 
 @pytest.fixture(scope="module")
@@ -147,7 +147,7 @@ def test_etapa_ocr_rejeita_placa_completa_antes_do_motor(monkeypatch, segmentaca
 
 def test_consolidacao_preserva_posicao_da_falha():
     from placas.modelos import Leitura
-    from placas.resultado import consolidar_resultado
+    from placas.etapas.e8_resultado import consolidar_resultado
     leituras = [Leitura(c, c, 90) for c in "ABC1D23"]
     leituras[4] = Leitura("?", "", -1)
     resultado = consolidar_resultado(leituras, "mercosul")
@@ -204,7 +204,7 @@ def test_interface_exemplo_sem_motor(monkeypatch):
 def test_interface_exibe_resultado_com_tesseract(monkeypatch):
     from streamlit.testing.v1 import AppTest
     letras = iter("ABC1D23")
-    from placas import ocr
+    from placas.etapas import e7_ocr as ocr
     monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
     monkeypatch.setattr(ocr.pytesseract, "image_to_data",
                         lambda *a, **kw: {"text": [next(letras)], "conf": [92]})

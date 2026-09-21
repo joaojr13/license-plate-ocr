@@ -1,7 +1,7 @@
 from pathlib import Path
 import cv2
-from placas.processamento import localizar
-from placas.preparacao_ocr import preparar_caractere, validar_entrada_ocr
+from placas.pipeline import localizar
+from placas.etapas.e6_recortes import preparar_caractere, validar_entrada_ocr
 
 
 def test_preserva_detalhe_interno_no_desempate_de_segmentacao():

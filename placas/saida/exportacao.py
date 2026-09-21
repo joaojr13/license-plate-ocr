@@ -2,7 +2,8 @@
 import numpy as np
 
 from placas.modelos import Segmentacao
-from placas.preparacao_ocr import gerar_variacoes, preparar_recortes, preparar_cinza
+from placas.etapas.e6_recortes import (gerar_variacoes, preparar_cinza,
+                                       preparar_recortes)
 
 
 def imagens_das_tentativas(segmentacao: Segmentacao, resultado: dict) -> dict[str, np.ndarray]:

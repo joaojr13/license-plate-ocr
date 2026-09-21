@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import pytest
 
-from placas.preparacao_ocr import corrigir_inclinacao, validar_entrada_ocr
-from placas.ocr import reconhecer_caracteres
+from placas.etapas.e6_recortes import corrigir_inclinacao, validar_entrada_ocr
+from placas.etapas.e7_ocr import reconhecer_caracteres
 
 
 def recortes():

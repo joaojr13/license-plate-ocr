@@ -10,7 +10,7 @@ from placas.config import (ALTURA_MINIMA_CANDIDATA, ALTURA_MINIMA_FAIXA_DE_LETRA
                            PROPORCAO_CANDIDATA, SOBREPOSICAO_MAXIMA_EXIBIDA,
                            TAMANHOS_KERNEL_MORFOLOGIA)
 from placas.modelos import Box, CandidataPlaca, ImagemPreparada, Localizacao
-from placas.segmentacao import segmentar
+from placas.etapas.e5_segmentacao import segmentar
 
 
 def _sobreposicao(a: Box, b: Box) -> float:

@@ -8,13 +8,14 @@ import zipfile
 import cv2
 import streamlit as st
 
-from placas.imagem import ler_imagem
-from placas.exportacao import imagens_das_tentativas
 from interface.passos import exibir_passos
-from placas.ocr import verificar_tesseract
-from placas.preparacao_ocr import preparar_caractere, preparar_recortes, validar_segmentacao
-from placas.processamento import localizar, reconhecer
-from placas.visualizacao import desenhar_localizacao, desenhar_segmentacao
+from placas.etapas.e6_recortes import (preparar_caractere, preparar_recortes,
+                                       validar_segmentacao)
+from placas.etapas.e7_ocr import verificar_tesseract
+from placas.imagem import ler_imagem
+from placas.pipeline import localizar, reconhecer
+from placas.saida.exportacao import imagens_das_tentativas
+from placas.saida.visualizacao import desenhar_localizacao, desenhar_segmentacao
 
 st.set_page_config(page_title="Leitura de placas", page_icon="🚘", layout="wide")
 st.title("Reconhecimento de placas veiculares")

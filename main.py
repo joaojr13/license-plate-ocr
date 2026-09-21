@@ -6,11 +6,11 @@ import sys
 
 import cv2
 
+from placas.etapas.e6_recortes import preparar_caractere, preparar_recortes
 from placas.imagem import ler_imagem
-from placas.exportacao import imagens_das_tentativas
-from placas.preparacao_ocr import preparar_caractere, preparar_recortes
-from placas.processamento import localizar, reconhecer
-from placas.visualizacao import desenhar_localizacao, desenhar_segmentacao
+from placas.pipeline import localizar, reconhecer
+from placas.saida.exportacao import imagens_das_tentativas
+from placas.saida.visualizacao import desenhar_localizacao, desenhar_segmentacao
 
 
 def main() -> int:

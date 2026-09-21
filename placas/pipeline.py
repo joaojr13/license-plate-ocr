@@ -4,16 +4,16 @@ Leia este arquivo primeiro; cada chamada leva ao módulo da etapa correspondente
 A interface pode parar após a segmentação para inspecionar os recortes sem OCR.
 """
 import numpy as np
-from placas import ocr
 
-from placas.bordas import encontrar_bordas
 from placas.config import NOME_DO_MOTOR
-from placas.localizacao import selecionar_placa
+from placas.etapas import e7_ocr as ocr
+from placas.etapas.e1_preparacao import preparar_imagem
+from placas.etapas.e2_bordas import encontrar_bordas
+from placas.etapas.e3_morfologia import aplicar_morfologia
+from placas.etapas.e4_localizacao import selecionar_placa
+from placas.etapas.e6_recortes import preparar_cinza, preparar_recortes
+from placas.etapas.e8_resultado import consolidar_resultado
 from placas.modelos import Localizacao, Segmentacao
-from placas.morfologia import aplicar_morfologia
-from placas.preparacao import preparar_imagem
-from placas.preparacao_ocr import preparar_recortes, preparar_cinza
-from placas.resultado import consolidar_resultado
 
 
 def localizar(imagem: np.ndarray) -> Localizacao:

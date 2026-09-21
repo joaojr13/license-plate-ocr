@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from examples.gerar_exemplo import criar_veiculo
-from placas import ocr
-from placas.exportacao import imagens_das_tentativas
-from placas.preparacao_ocr import gerar_variacoes, preparar_caractere, validar_entrada_ocr
-from placas.processamento import localizar, reconhecer
+from placas.etapas import e7_ocr as ocr
+from placas.saida.exportacao import imagens_das_tentativas
+from placas.etapas.e6_recortes import gerar_variacoes, preparar_caractere, validar_entrada_ocr
+from placas.pipeline import localizar, reconhecer
 
 
 @pytest.fixture(scope="module")
@@ -94,7 +94,7 @@ def test_contagem_e_exportacao_correspondem_as_chamadas(monkeypatch, segmentacao
 
 def test_interface_mostra_historico_das_tentativas(monkeypatch):
     from streamlit.testing.v1 import AppTest
-    from placas import ocr
+    from placas.etapas import e7_ocr as ocr
     from placas.modelos import Leitura
     monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
     monkeypatch.setattr(ocr, "reconhecer_caracteres",
