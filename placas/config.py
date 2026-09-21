@@ -87,6 +87,8 @@ MINIMO_DE_SIMBOLOS_INCLINADOS = 5      # Exigidos no mesmo sentido para corrigir
 MARGEM_PARA_ROTACIONAR = 40            # Espaço extra para o símbolo não ser cortado.
 
 # --- Etapa 7 · OCR ----------------------------------------------------------
+ALTURAS_RECUPERACAO = (30, 50)  # Escalas menores para símbolos inconclusivos.
+MARGEM_RECUPERACAO = 10
 NOME_DO_MOTOR = "tesseract"
 IDIOMA_OCR = "eng"
 MODO_OEM = 3                   # Motor LSTM padrão do Tesseract.

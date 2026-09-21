@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 
 from placas.etapas.e6_recortes import preparar_cinza, preparar_recortes
+from placas.etapas.e6_escalas import preparar_escalas
 from placas.etapas.e6_variacoes import gerar_variacoes
 from placas.modelos import Segmentacao
 
@@ -23,6 +24,8 @@ def imagens_das_tentativas(segmentacao: Segmentacao, resultado: dict) -> dict[st
               for l in resultado["leituras"] for t in l["tentativas"]) else None)
     for indice, (padrao, leitura) in enumerate(zip(preparar_recortes(segmentacao), resultado["leituras"]), 1):
         variacoes = gerar_variacoes(padrao)
+        if any(t["variacao"].startswith("escala_") for t in leitura["tentativas"]):
+            variacoes.update(preparar_escalas(padrao))
         for tentativa in leitura["tentativas"]:
             nome = tentativa["variacao"]
             sufixo = "_psm13" if tentativa.get("psm", 10) == 13 else ""

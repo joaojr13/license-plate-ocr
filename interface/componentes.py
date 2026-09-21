@@ -22,7 +22,7 @@ from placas.saida.visualizacao import desenhar_localizacao, desenhar_segmentacao
 EXEMPLO = Path(__file__).resolve().parents[1] / "examples" / "veiculo_sintetico.png"
 # Muda quando a segmentação muda, para invalidar o cache de execuções antigas.
 VERSAO_DA_SEGMENTACAO = "candidatas-morfologia-v4"
-VERSAO_DO_OCR = b"tesseract-unico-v1"
+VERSAO_DO_OCR = b"tesseract-escalas-v2"
 
 
 def configurar_pagina() -> None:
@@ -152,9 +152,10 @@ def mostrar_resultado(segmentacao: Segmentacao, resultado: dict) -> None:
 def _mostrar_downloads(segmentacao: Segmentacao, resultado: dict) -> None:
     """Exporta cada entrada realmente enviada, incluindo as tentativas adicionais."""
     imagens = imagens_das_tentativas(segmentacao, resultado)
-    adicionais = {nome: imagem for nome, imagem in imagens.items() if "cinza_" in nome}
+    adicionais = {nome: imagem for nome, imagem in imagens.items()
+                  if "cinza_" in nome or "escala_" in nome}
     if adicionais:
-        with st.expander("Recortes em tons de cinza enviados nas tentativas adicionais"):
+        with st.expander("Recortes em tons de cinza e escalas enviados nas tentativas adicionais"):
             for nome, imagem in adicionais.items():
                 st.image(imagem, caption=nome)
     st.download_button("Baixar resultado e recortes",

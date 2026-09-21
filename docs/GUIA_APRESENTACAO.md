@@ -60,6 +60,10 @@ um caractere. O modo, sozinho, não garante o cumprimento da restrição: os rec
 A primeira resposta forte é aceita. Se for incerta, exigimos concordância entre preparos. Se o
 binário permanecer inconclusivo, avaliamos separadamente o consenso de três margens em cinza.
 Uma resposta com vários símbolos não é truncada; torna-se `?`. Não há substituição fixa de Z/2 ou W/H.
+Se o cinza falhar, há quatro chamadas extras: alturas 30 e 50, cada uma em PSM 10 e 13.
+A redução por área preserva proporção e produz níveis de cinza nas bordas. Exigimos consenso
+forte entre as duas alturas, sem conflito forte nas novas tentativas. O OCR é sensível à escala:
+um símbolo maior não é necessariamente mais fácil de reconhecer. Não criamos detalhes novos.
 Confiança ≥ 60 é uma heurística, e não 60% de certeza. A maior pontuação isolada não comprova acerto.
 
 ## 8. Resultado

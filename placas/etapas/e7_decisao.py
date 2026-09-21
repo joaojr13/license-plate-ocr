@@ -11,6 +11,7 @@ import numpy as np
 from placas.config import (CONFIANCA_MINIMA, FORMATOS, MINIMO_DE_CONCORDANCIAS,
                            PSM_CARACTERE_UNICO, PSM_LINHA_CRUA, TOTAL_CARACTERES)
 from placas.etapas import e7_motor_ocr
+from placas.etapas.e6_escalas import preparar_escalas
 from placas.etapas.e6_variacoes import gerar_variacoes
 from placas.etapas.e7_motor_ocr import ALFABETO
 from placas.modelos import EntradaCinza, Leitura, TentativaOCR
@@ -138,3 +139,28 @@ def reconhecer_caracteres(entradas: list[np.ndarray], formato: str = "livre") ->
     return [reconhecer_com_tentativas(imagem,
                                       e7_motor_ocr.alfabeto_por_posicao(indice, formato))
             for indice, imagem in enumerate(entradas)]
+
+
+def recuperar_com_escalas(leitura: Leitura, entrada: np.ndarray, permitidos: str) -> Leitura:
+    """Última tentativa: consenso independente em duas alturas, sem conflito forte.
+
+    Os votos anteriores continuam no histórico. Como na recuperação em cinza,
+    esta representação decide separadamente; não há substituição por posição.
+    """
+    if leitura.caractere != "?":
+        return leitura
+    novas = []
+    for nome, imagem in preparar_escalas(entrada).items():
+        for psm in (PSM_CARACTERE_UNICO, PSM_LINHA_CRUA):
+            resposta = e7_motor_ocr.reconhecer_caractere(
+                imagem, permitidos, psm=psm, referencia_escala=entrada)
+            novas.append(TentativaOCR(nome, resposta.caractere, resposta.bruto,
+                                      resposta.confianca, psm=psm))
+    historico = leitura.tentativas + novas
+    fortes = _fortes(novas)
+    if _ha_consenso(fortes) and len({t.variacao for t in fortes}) >= 2:
+        return _aceitar(fortes, historico,
+                       "Recuperado por concordância entre duas escalas, sem conflito forte.")
+    leitura.tentativas = historico
+    leitura.motivo += " Escalas menores também inconclusivas."
+    return leitura

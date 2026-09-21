@@ -81,7 +81,11 @@ não uma probabilidade. A seleção de região não usa OCR.
 - Se continuar inconclusiva, usa o recorte em tons de cinza com três margens no PSM 10. Duas margens
   precisam concordar com confiança ≥ 60 e sem conflito forte entre as leituras em cinza. Esse consenso
   pode resolver conflitos do binário, preservando todas as respostas no histórico.
-- Sem evidência suficiente, mantém `?`. São até 15 chamadas por caractere, 105 por placa; com primeiras
+- Se o cinza também falhar, reduz o recorte individual validado para alturas 30 e 50, com
+  interpolação por área e margem 10. Testa PSM 10 e 13 e exige respostas fortes concordantes
+  nas duas alturas, sem conflito forte nesta representação. O histórico anterior é preservado.
+  Isso testa a sensibilidade do OCR à escala; não recupera resolução perdida nem usa letras esperadas.
+- Sem evidência suficiente, mantém `?`. São até 19 chamadas por caractere, 133 por placa; com primeiras
   leituras aceitas, são apenas sete. Preparos inválidos ou duplicados são descartados.
 
 Pontuações não são probabilidades calibradas. Uma leitura errada com pontuação alta ainda pode ser

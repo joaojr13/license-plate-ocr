@@ -45,9 +45,17 @@ def verificar_tesseract() -> str:
 
 def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABETO,
                          psm: int = PSM_CARACTERE_UNICO,
-                         referencia_binaria: np.ndarray | None = None) -> Leitura:
+                         referencia_binaria: np.ndarray | None = None,
+                         referencia_escala: np.ndarray | None = None) -> Leitura:
     """Entrada: um recorte preparado na etapa 6. Saída: uma leitura individual."""
-    if referencia_binaria is None:
+    if referencia_escala is not None:
+        from placas.etapas.e6_escalas import preparar_escalas
+        if referencia_binaria is not None or not any(
+            np.array_equal(imagem_individual, imagem)
+            for imagem in preparar_escalas(referencia_escala).values()
+        ):
+            raise ValueError("Escala incompatível com o caractere individual validado.")
+    elif referencia_binaria is None:
         validar_entrada_ocr(imagem_individual)
     else:
         validar_entrada_cinza(imagem_individual, referencia_binaria)

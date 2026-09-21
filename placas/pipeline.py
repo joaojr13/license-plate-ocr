@@ -31,6 +31,9 @@ def reconhecer(segmentacao: Segmentacao, formato: str = "livre") -> dict:
     entradas = preparar_recortes(segmentacao)                       # 6 · Recortes
     leituras = e7_decisao.reconhecer_caracteres(entradas, formato)  # 7 · OCR individual
     leituras = _recuperar_incertas(leituras, segmentacao, formato)  # 7b · Tons de cinza
+    leituras = [e7_decisao.recuperar_com_escalas(
+        leitura, entrada, e7_motor_ocr.alfabeto_por_posicao(i, formato))
+        for i, (leitura, entrada) in enumerate(zip(leituras, entradas))]
     resultado = consolidar_resultado(leituras, formato)             # 8 · Arrays e avisos
     resultado["motor"] = NOME_DO_MOTOR
     return resultado
