@@ -19,27 +19,6 @@ from placas.validacao import validar_entrada_cinza, validar_entrada_ocr
 ALFABETO = string.ascii_uppercase + string.digits
 
 
-def _pasta_de_modelos() -> str | None:
-    """Pasta dos modelos quando eles vêm do pacote tessdata.eng, ou None.
-
-    O pacote conda do Tesseract não traz modelos de idioma, então a versão
-    publicada os instala pelo pip e precisa apontar o motor para eles. Numa
-    instalação comum (Homebrew, apt), o pacote não existe e o motor usa a
-    própria pasta padrão — este caminho não muda nada.
-    """
-    try:
-        import tessdata
-        return str(tessdata.data_path())
-    except Exception:  # noqa: BLE001 - sem o pacote, segue o padrão do motor
-        return None
-
-
-def _configuracao(extra: str = "") -> str:
-    """Opções da linha de comando, com a pasta de modelos quando necessária."""
-    pasta = _pasta_de_modelos()
-    return (f'--tessdata-dir "{pasta}" ' if pasta else "") + extra
-
-
 def alfabeto_por_posicao(indice: int, formato: str) -> str:
     """Na página, o formato livre permite sempre letras e números."""
     if formato == "livre":
@@ -56,7 +35,7 @@ def verificar_tesseract() -> str:
         pytesseract.pytesseract.tesseract_cmd = caminho
     try:
         versao = str(pytesseract.get_tesseract_version())
-        if IDIOMA_OCR not in pytesseract.get_languages(config=_configuracao()):
+        if "eng" not in pytesseract.get_languages(config=""):
             raise RuntimeError("Instale os dados de idioma 'eng' do Tesseract.")
         return versao
     except pytesseract.TesseractNotFoundError as exc:
@@ -77,8 +56,8 @@ def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABE
     # Mesmo no modo 13, a entrada validada contém somente um caractere.
     dados = pytesseract.image_to_data(
         imagem_individual, lang=IDIOMA_OCR, output_type=pytesseract.Output.DICT,
-        config=_configuracao(f"--psm {psm} --oem {MODO_OEM} "
-                             f"-c tessedit_char_whitelist={permitidos}"),
+        config=f"--psm {psm} --oem {MODO_OEM} "
+               f"-c tessedit_char_whitelist={permitidos}",
         timeout=TEMPO_LIMITE_OCR,
     )
     tokens = [(str(t).strip().upper(), float(conf))
