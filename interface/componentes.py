@@ -10,9 +10,9 @@ from pathlib import Path
 import streamlit as st
 
 from interface import textos
+from placas.etapas import e7_motor_ocr
 from placas.etapas.e6_normalizacao import preparar_caractere
 from placas.etapas.e6_recortes import preparar_recortes
-from placas.etapas.e7_motor_ocr import verificar_tesseract
 from placas.imagem import ler_imagem
 from placas.modelos import Localizacao, Segmentacao
 from placas.pipeline import localizar, reconhecer
@@ -40,7 +40,11 @@ def barra_lateral() -> tuple[object, bool, bool]:
         st.caption("OCR: Tesseract · processamento local")
         st.info(textos.BARRA_LATERAL_NOTA)
         try:
-            st.success(f"Tesseract {verificar_tesseract()} disponível")
+            # Chamado pelo módulo, e não por um nome importado: este arquivo é
+            # carregado uma vez e fica em cache, então um nome importado ficaria
+            # preso à função original e os testes de interface não conseguiriam
+            # substituir o motor.
+            st.success(f"Tesseract {e7_motor_ocr.verificar_tesseract()} disponível")
             motor_disponivel = True
         except (RuntimeError, OSError) as exc:
             st.warning(str(exc))
