@@ -1,0 +1,19 @@
+# Configuração de estilo. O projeto não é empacotado: roda a partir da raiz.
+#
+#   python -m pip install ruff
+#   ruff check .          verifica
+#   ruff check --fix .    corrige o que for automático
+#
+# As regras escolhidas são as básicas, de propósito: erros de sintaxe e de
+# nome (E, F), ordem dos imports (I) e sintaxe moderna de tipos (UP).
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", "output"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["placas", "interface", "examples"]

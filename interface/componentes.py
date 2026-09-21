@@ -148,7 +148,7 @@ def mostrar_resultado(segmentacao: Segmentacao, resultado: dict) -> None:
 def _mostrar_downloads(segmentacao: Segmentacao, resultado: dict) -> None:
     """Exporta cada entrada realmente enviada, incluindo as tentativas adicionais."""
     imagens = imagens_das_tentativas(segmentacao, resultado)
-    adicionais = {nome: imagem for nome, imagem in imagens.items() if 'cinza_' in nome}
+    adicionais = {nome: imagem for nome, imagem in imagens.items() if "cinza_" in nome}
     if adicionais:
         with st.expander("Recortes em tons de cinza enviados nas tentativas adicionais"):
             for nome, imagem in adicionais.items():

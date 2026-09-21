@@ -21,11 +21,11 @@ ALFABETO = string.ascii_uppercase + string.digits
 
 def alfabeto_por_posicao(indice: int, formato: str) -> str:
     """Na página, o formato livre permite sempre letras e números."""
-    if formato == 'livre':
+    if formato == "livre":
         return ALFABETO
     if formato not in FORMATOS:
-        raise ValueError('Formato desconhecido.')
-    letra = indice < 3 or (formato == 'mercosul' and indice == 4)
+        raise ValueError("Formato desconhecido.")
+    letra = indice < 3 or (formato == "mercosul" and indice == 4)
     return string.ascii_uppercase if letra else string.digits
 
 

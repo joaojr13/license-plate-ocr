@@ -38,7 +38,7 @@ MORFOLOGIA_MASCARA = (
 )
 
 MORFOLOGIA_SEM_REGIOES = (
-    'Nenhuma região dessa operação passou pelos filtros de tamanho e proporção nessa opção.'
+    "Nenhuma região dessa operação passou pelos filtros de tamanho e proporção nessa opção."
 )
 
 MORFOLOGIA_LEGENDA = (
@@ -75,7 +75,7 @@ LOCALIZACAO_NOTA = (
 )
 
 LOCALIZACAO_AMPLIAR = (
-    'A seleção acima serve apenas para inspecionar o recorte; a placa escolhida pelo sistema permanece a mesma.'
+    "A seleção acima serve apenas para inspecionar o recorte; a placa escolhida pelo sistema permanece a mesma."
 )
 
 SEGMENTACAO_ALTERNATIVAS = (

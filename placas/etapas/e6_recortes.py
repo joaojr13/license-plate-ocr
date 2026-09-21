@@ -30,7 +30,7 @@ def preparar_cinza(segmentacao: Segmentacao) -> list[dict[str, EntradaCinza]]:
     """
     validar_segmentacao(segmentacao)
     if segmentacao.placa.shape[:2] != segmentacao.binaria.shape:
-        raise ValueError('Placa e segmentação devem compartilhar as mesmas coordenadas.')
+        raise ValueError("Placa e segmentação devem compartilhar as mesmas coordenadas.")
     cinza = cv2.cvtColor(segmentacao.placa, cv2.COLOR_BGR2GRAY)
     return [_variacoes_em_cinza(cinza, caractere, segmentacao.metodo)
             for caractere in segmentacao.caracteres]
@@ -40,7 +40,7 @@ def _variacoes_em_cinza(cinza: np.ndarray, caractere, metodo: str) -> dict[str, 
     """Uma entrada por margem, todas do mesmo caractere e já validadas."""
     x, y, w, h = caractere.caixa
     recorte = cinza[y:y+h, x:x+w]
-    if 'caracteres claros' in metodo:
+    if "caracteres claros" in metodo:
         # Invertido, o símbolo fica escuro sobre fundo claro nas duas polaridades.
         recorte = 255 - recorte
     letra = cv2.resize(recorte, (largura_proporcional(w, h), ALTURA_CARACTERE),

@@ -7,11 +7,12 @@ import streamlit as st
 from interface import textos
 from placas.etapas.e3_morfologia import FASES, nome_da_etapa
 from placas.etapas.e4_localizacao import nome_da_fonte
+from placas.modelos import Localizacao, Segmentacao
 from placas.saida.visualizacao import (desenhar_candidatas, desenhar_localizacao,
                                        desenhar_regioes_morfologia, desenhar_segmentacao)
 
 
-def exibir_preparacao(localizacao):
+def exibir_preparacao(localizacao: Localizacao) -> None:
     """Etapa 1 da página."""
     with st.expander("1 · Preparar a imagem", expanded=True):
         st.caption("Código desta etapa: placas/etapas/e1_preparacao.py · preparar_imagem()")
@@ -22,7 +23,7 @@ def exibir_preparacao(localizacao):
         suave.image(localizacao.etapas["Suavização"], caption="Suavização Gaussiana", width="stretch")
 
 
-def exibir_bordas(localizacao):
+def exibir_bordas(localizacao: Localizacao) -> None:
     """Etapa 2 da página."""
     with st.expander("2 · Encontrar bordas"):
         st.caption("Código desta etapa: placas/etapas/e2_bordas.py · encontrar_bordas()")
@@ -31,7 +32,7 @@ def exibir_bordas(localizacao):
         st.caption(textos.BORDAS_OBSERVACAO)
 
 
-def exibir_morfologia(localizacao):
+def exibir_morfologia(localizacao: Localizacao) -> None:
     """Etapa 3 da página."""
     with st.expander("3 · Aplicar morfologia para gerar outras candidatas"):
         st.caption("Código desta etapa: placas/etapas/e3_morfologia.py · aplicar_morfologia()")
@@ -55,12 +56,12 @@ def exibir_morfologia(localizacao):
                         localizacao.etapas[nome_da_etapa(operacao, tamanho, fase)],
                         caption=legenda, width="stretch")
                 st.markdown(f'**Regiões candidatas geradas por {operacao} {tamanho}×7**')
-                tipo = st.radio('Margens das regiões', ['Sem margem extra', 'Com margem extra'],
+                tipo = st.radio("Margens das regiões", ["Sem margem extra", "Com margem extra"],
                                 horizontal=True, key=f'margens_{operacao}_{tamanho}')
                 caixas = localizacao.candidatas_morfologia.get(
                     nome_da_fonte(operacao, tamanho, tipo), [])
                 st.image(desenhar_regioes_morfologia(localizacao.imagem, caixas),
-                         channels='BGR', width='stretch',
+                         channels="BGR", width="stretch",
                          caption=f'{len(caixas)} regiões candidatas · {operacao} {tamanho}×7 · {tipo.lower()}')
                 if not caixas:
                     st.info(textos.MORFOLOGIA_SEM_REGIOES)
@@ -68,7 +69,7 @@ def exibir_morfologia(localizacao):
         st.info(textos.MORFOLOGIA_NOTA)
 
 
-def exibir_localizacao(localizacao):
+def exibir_localizacao(localizacao: Localizacao) -> None:
     """Etapa 4 da página."""
     segmentacao = localizacao.segmentacao
     with st.expander("4 · Escolher e recortar a provável placa"):
@@ -83,7 +84,7 @@ def exibir_localizacao(localizacao):
                    f"Pontuação geométrica: {segmentacao.qualidade:.2f}. Não é uma probabilidade de acerto.")
         st.write(textos.LOCALIZACAO_CUIDADO)
         if localizacao.candidatas:
-            st.markdown('**Recortes comparados na escolha da placa**')
+            st.markdown("**Recortes comparados na escolha da placa**")
             st.caption(f'{localizacao.total_candidatas} regiões avaliadas; abaixo estão até cinco '
                        'candidatas distintas. Regiões muito sobrepostas foram agrupadas apenas '
                        'para exibição. A pontuação não é uma probabilidade.')
@@ -96,42 +97,42 @@ def exibir_localizacao(localizacao):
                         with st.container(border=True):
                             st.markdown(f'**Candidata {numero}**')
                             st.image(localizacao.imagem[cy:cy+ch, cx:cx+cw],
-                                     channels='BGR', width='stretch',
+                                     channels="BGR", width="stretch",
                                      caption=f'Recorte da candidata {numero}')
                             if candidata.caixa == localizacao.caixa:
-                                st.success('Escolhida pelo sistema')
+                                st.success("Escolhida pelo sistema")
                             elif candidata.quantidade_caracteres < 4:
-                                st.caption('Descartada: menos de 4 componentes')
+                                st.caption("Descartada: menos de 4 componentes")
                             else:
-                                st.caption('Não escolhida')
+                                st.caption("Não escolhida")
                             st.write(f'Pontuação: **{candidata.qualidade:.2f}** · '
                                      f'Componentes: **{candidata.quantidade_caracteres}**')
                             st.caption(f'Binarização: {candidata.metodo}')
-        if localizacao.candidatas and st.checkbox('Ver regiões candidatas', key='ver_candidatas'):
-            st.image(desenhar_candidatas(localizacao), channels='BGR', width='stretch',
-                     caption='Verde: região escolhida · Amarelo: outras regiões avaliadas')
+        if localizacao.candidatas and st.checkbox("Ver regiões candidatas", key="ver_candidatas"):
+            st.image(desenhar_candidatas(localizacao), channels="BGR", width="stretch",
+                     caption="Verde: região escolhida · Amarelo: outras regiões avaliadas")
             st.caption(f'{localizacao.total_candidatas} regiões avaliadas. Exibindo até cinco distintas, '
                        'ordenadas por pontuação, com a escolhida em primeiro lugar. Regiões muito '
                        'sobrepostas foram agrupadas apenas nesta visualização.')
             st.dataframe([
-                {'Candidata': i, 'Pontuação': round(c.qualidade, 2),
-                 'Caracteres encontrados': c.quantidade_caracteres,
-                 'Situação': ('Escolhida' if c.caixa == localizacao.caixa else
-                              'Descartada: menos de 4 caracteres' if c.quantidade_caracteres < 4 else
-                              'Outra candidata'), 'Binarização': c.metodo}
+                {"Candidata": i, "Pontuação": round(c.qualidade, 2),
+                 "Caracteres encontrados": c.quantidade_caracteres,
+                 "Situação": ("Escolhida" if c.caixa == localizacao.caixa else
+                              "Descartada: menos de 4 caracteres" if c.quantidade_caracteres < 4 else
+                              "Outra candidata"), "Binarização": c.metodo}
                 for i, c in enumerate(localizacao.candidatas, 1)
-            ], hide_index=True, width='stretch')
+            ], hide_index=True, width="stretch")
             st.caption(textos.LOCALIZACAO_NOTA)
-            numero = st.selectbox('Ampliar candidata', range(1, len(localizacao.candidatas)+1),
-                                  format_func=lambda i: f'Candidata {i}', key='candidata_ampliada')
+            numero = st.selectbox("Ampliar candidata", range(1, len(localizacao.candidatas)+1),
+                                  format_func=lambda i: f'Candidata {i}', key="candidata_ampliada")
             candidata = localizacao.candidatas[numero-1]
             cx, cy, cw, ch = candidata.caixa
-            st.image(localizacao.imagem[cy:cy+ch, cx:cx+cw], channels='BGR', width='stretch',
+            st.image(localizacao.imagem[cy:cy+ch, cx:cx+cw], channels="BGR", width="stretch",
                      caption=f'Candidata {numero} · x={cx}, y={cy}, largura={cw}, altura={ch}')
             st.caption(textos.LOCALIZACAO_AMPLIAR)
 
 
-def exibir_segmentacao(segmentacao):
+def exibir_segmentacao(segmentacao: Segmentacao) -> None:
     """Etapa 5 da página."""
     with st.expander("5 · Binarizar a região e separar os caracteres"):
         st.caption("Código desta etapa: placas/etapas/e5_segmentacao.py · segmentar()")
@@ -145,7 +146,7 @@ def exibir_segmentacao(segmentacao):
         st.caption(textos.SEGMENTACAO_NOTA)
 
 
-def exibir_preparacao_ocr(valida):
+def exibir_preparacao_ocr(valida: bool) -> None:
     """Etapa 6 da página."""
     with st.expander("6 · Validar e preparar cada recorte para o OCR"):
         st.caption("Código desta etapa: placas/etapas/e6_recortes.py · preparar_recortes()")
@@ -159,7 +160,7 @@ def exibir_preparacao_ocr(valida):
         st.caption(textos.RECORTES_NOTA)
 
 
-def exibir_ocr(valida, motor_disponivel, resultado):
+def exibir_ocr(valida: bool, motor_disponivel: bool, resultado: dict | None) -> None:
     """Etapa 7 da página."""
     with st.expander("7 · Reconhecer uma letra ou número por vez"):
         st.caption("Código desta etapa: placas/etapas/e7_decisao.py · reconhecer_caracteres()")
@@ -191,7 +192,7 @@ def exibir_ocr(valida, motor_disponivel, resultado):
             st.info(textos.OCR_PENDENTE)
 
 
-def exibir_resultado(resultado):
+def exibir_resultado(resultado: dict | None) -> None:
     """Etapa 8 da página."""
     with st.expander("8 · Concatenar, armazenar no array e exibir"):
         st.caption("Código desta etapa: placas/etapas/e8_resultado.py · consolidar_resultado()")
@@ -205,7 +206,8 @@ def exibir_resultado(resultado):
             st.info(textos.RESULTADO_PENDENTE)
 
 
-def exibir_passos(localizacao, valida, motor_disponivel, resultado=None):
+def exibir_passos(localizacao: Localizacao, valida: bool, motor_disponivel: bool,
+                  resultado: dict | None = None) -> None:
     """Apresenta as oito etapas na mesma ordem do guia e dos módulos."""
     st.divider()
     st.header("Processo passo a passo")

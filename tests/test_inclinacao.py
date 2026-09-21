@@ -11,8 +11,8 @@ from placas.etapas.e7_decisao import reconhecer_caracteres
 
 
 def recortes():
-    pasta = Path(__file__).parent / 'fixtures' / 'recortes_inclinados'
-    return [cv2.imread(str(p), cv2.IMREAD_GRAYSCALE) for p in sorted(pasta.glob('*.png'))]
+    pasta = Path(__file__).parent / "fixtures" / "recortes_inclinados"
+    return [cv2.imread(str(p), cv2.IMREAD_GRAYSCALE) for p in sorted(pasta.glob("*.png"))]
 
 
 def test_correcao_preserva_sete_simbolos_individuais():
@@ -31,7 +31,7 @@ def test_sem_inclinacao_comum_nao_altera_simbolos():
         np.testing.assert_array_equal(corrigida, entrada)
 
 
-@pytest.mark.skipif(shutil.which('tesseract') is None, reason='Tesseract não instalado')
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract não instalado")
 def test_regressao_real_p_e_um():
     leituras = reconhecer_caracteres(corrigir_inclinacao(recortes()))
-    assert ''.join(l.caractere for l in leituras) == 'TEP3A12'
+    assert "".join(l.caractere for l in leituras) == "TEP3A12"

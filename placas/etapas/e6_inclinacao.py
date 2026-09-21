@@ -17,7 +17,7 @@ from placas.validacao import validar_entrada_ocr
 def _angulo_do_simbolo(entrada: np.ndarray) -> float:
     """Inclinação estimada pelos momentos da imagem, em graus."""
     momentos = cv2.moments(255 - entrada)
-    inclinacao = momentos['mu11'] / momentos['mu02'] if momentos['mu02'] else 0
+    inclinacao = momentos["mu11"] / momentos["mu02"] if momentos["mu02"] else 0
     return float(-np.degrees(np.arctan(inclinacao)))
 
 

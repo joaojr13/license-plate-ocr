@@ -19,7 +19,7 @@ from placas.etapas.e5_segmentacao import segmentar
 from placas.modelos import Box, CandidataPlaca, ImagemPreparada, Localizacao, Segmentacao
 
 # Alguns contornos já abrangem a placa inteira; outros, só a faixa das letras.
-MARGENS_DA_CANDIDATA = ((False, 'Sem margem extra'), (True, 'Com margem extra'))
+MARGENS_DA_CANDIDATA = ((False, "Sem margem extra"), (True, "Com margem extra"))
 
 
 def nome_da_fonte(operacao: str, tamanho: int, tipo: str) -> str:

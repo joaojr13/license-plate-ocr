@@ -67,6 +67,6 @@ def validar_entrada_cinza(imagem: np.ndarray, referencia: np.ndarray) -> None:
     """O recorte em cinza só vale acompanhado do componente que o originou."""
     validar_entrada_ocr(referencia)
     if imagem.dtype != np.uint8 or imagem.shape != referencia.shape:
-        raise ValueError('Recorte em cinza incompatível com seu componente individual.')
+        raise ValueError("Recorte em cinza incompatível com seu componente individual.")
     if not _tem_borda_branca(imagem, _margem_de(imagem)):
-        raise ValueError('Recorte em cinza deve ter margem branca livre.')
+        raise ValueError("Recorte em cinza deve ter margem branca livre.")

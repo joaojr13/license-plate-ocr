@@ -20,7 +20,7 @@ def desenhar_candidatas(resultado: Localizacao) -> np.ndarray:
         escolhida = candidata.caixa == resultado.caixa
         cor = (70, 210, 70) if escolhida else (0, 215, 255)
         cv2.rectangle(marcada, (x, y), (x+w, y+h), cor, 3 if escolhida else 2)
-        legenda = f'{indice}' + (' - escolhida' if escolhida else '')
+        legenda = f'{indice}' + (" - escolhida" if escolhida else "")
         posicao = (x, max(18, y-6))
         cv2.putText(marcada, legenda, posicao, cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0,0,0), 4)
         cv2.putText(marcada, legenda, posicao, cv2.FONT_HERSHEY_SIMPLEX, 0.55, cor, 1)

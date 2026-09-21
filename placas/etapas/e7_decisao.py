@@ -114,7 +114,7 @@ def recuperar_com_cinza(leitura: Leitura, variacoes: dict[str, EntradaCinza],
     Não mistura pontuações dos dois preparos nem usa a letra esperada: apenas as
     tentativas em cinza votam, embora o histórico guarde todas as respostas.
     """
-    if leitura.caractere != '?':
+    if leitura.caractere != "?":
         return leitura
     novas = [_tentar_em_cinza(nome, entrada, permitidos)
              for nome, entrada in variacoes.items()]
@@ -124,7 +124,7 @@ def recuperar_com_cinza(leitura: Leitura, variacoes: dict[str, EntradaCinza],
         return _aceitar(fortes, historico, 'Recuperado por concordância entre margens '
                                            'em tons de cinza; binário inconclusivo.')
     leitura.tentativas = historico
-    leitura.motivo += ' Tons de cinza também inconclusivos.'
+    leitura.motivo += " Tons de cinza também inconclusivos."
     return leitura
 
 
