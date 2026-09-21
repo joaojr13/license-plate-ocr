@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from placas.etapas import e7_ocr as ocr
+from placas.etapas import e7_decisao, e7_motor_ocr
 from placas.modelos import Leitura, TentativaOCR
 from placas.pipeline import localizar, reconhecer
 from placas.etapas.e6_recortes import preparar_cinza
@@ -31,9 +31,9 @@ def test_cinza_consenso_e_exportacao(monkeypatch, segmentacao, respostas, espera
         enviadas.append(imagem.copy())
         texto, conf = next(respostas)
         return {'text':[texto], 'conf':[conf]}
-    monkeypatch.setattr(ocr.pytesseract, 'image_to_data', motor)
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, 'image_to_data', motor)
     anterior = Leitura('?', 'L', -1, [TentativaOCR('padrao','L','L',74)])
-    leitura = ocr.recuperar_com_cinza(anterior, variacoes)
+    leitura = e7_decisao.recuperar_com_cinza(anterior, variacoes)
     assert leitura.caractere == esperado
     assert len(leitura.tentativas) == 4
     from dataclasses import asdict
@@ -56,9 +56,9 @@ def test_cinza_rejeita_placa_completa(segmentacao):
 def test_leitura_aceita_nao_dispara_cinza(monkeypatch):
     def proibido(*a, **kw):
         pytest.fail('Não deve chamar OCR')
-    monkeypatch.setattr(ocr, 'reconhecer_caractere', proibido)
+    monkeypatch.setattr(e7_motor_ocr, 'reconhecer_caractere', proibido)
     leitura = Leitura('2','2',90)
-    assert ocr.recuperar_com_cinza(leitura, {}) is leitura
+    assert e7_decisao.recuperar_com_cinza(leitura, {}) is leitura
 
 
 @pytest.mark.skipif(shutil.which('tesseract') is None, reason='Tesseract não instalado')

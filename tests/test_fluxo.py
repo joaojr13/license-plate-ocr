@@ -8,7 +8,7 @@ import pytest
 
 from examples.gerar_exemplo import criar_veiculo
 from placas.imagem import ler_imagem
-from placas.etapas import e7_ocr as ocr
+from placas.etapas import e7_decisao, e7_motor_ocr
 from placas.modelos import Caractere
 from placas.etapas.e6_normalizacao import preparar_caractere
 from placas.validacao import validar_segmentacao
@@ -86,14 +86,14 @@ def test_rejeita_arquivo_invalido():
 def test_sete_chamadas_com_imagens_individuais(monkeypatch, segmentacao):
     recebidas = []
     valores = iter("ABC1D23")
-    monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", lambda: "teste")
 
     def motor(imagem, **kwargs):
         recebidas.append(imagem.copy())
         assert "--psm 10" in kwargs["config"]
         return {"text": ["", next(valores)], "conf": [-1, 92]}
 
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data", motor)
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data", motor)
     resultado = reconhecer(segmentacao)
     assert resultado["caracteres"] == list("ABC1D23")
     assert resultado["placas"] == ["ABC1D23"]
@@ -110,17 +110,17 @@ def test_segmentacao_incompleta_nao_chama_ocr(monkeypatch, segmentacao):
     incompleta.caracteres.pop()
     def proibido(*args, **kwargs):
         pytest.fail("OCR não pode ser chamado para segmentação incompleta")
-    monkeypatch.setattr(ocr, "verificar_tesseract", proibido)
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data", proibido)
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", proibido)
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data", proibido)
     with pytest.raises(ValueError, match="OCR bloqueado"):
         reconhecer(incompleta)
 
 
 @pytest.mark.parametrize("bruto", ["", "AB", "@"])
 def test_ocr_nao_inventa_leitura(monkeypatch, segmentacao, bruto):
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data",
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data",
                         lambda *a, **kw: {"text": [bruto], "conf": [30]})
-    leitura = ocr.reconhecer_caractere(preparar_caractere(segmentacao.caracteres[0]))
+    leitura = e7_motor_ocr.reconhecer_caractere(preparar_caractere(segmentacao.caracteres[0]))
     assert leitura.caractere == "?" and leitura.bruto == bruto
 
 
@@ -141,9 +141,9 @@ def test_rejeita_dois_componentes_no_mesmo_recorte():
 def test_etapa_ocr_rejeita_placa_completa_antes_do_motor(monkeypatch, segmentacao):
     def proibido(*args, **kwargs):
         pytest.fail("O motor não pode receber a imagem da placa completa")
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data", proibido)
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data", proibido)
     with pytest.raises(ValueError, match="recorte preparado"):
-        ocr.reconhecer_caractere(segmentacao.binaria)
+        e7_motor_ocr.reconhecer_caractere(segmentacao.binaria)
 
 
 def test_consolidacao_preserva_posicao_da_falha():
@@ -162,11 +162,11 @@ def test_consolidacao_preserva_posicao_da_falha():
 @pytest.mark.parametrize("formato,posicao4", [("antiga", "0123456789"), ("mercosul", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")])
 def test_restricao_por_posicao(monkeypatch, segmentacao, formato, posicao4):
     permitidos = []
-    monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", lambda: "teste")
     def motor(caractere, alfabeto):
         permitidos.append(alfabeto)
-        return ocr.Leitura(alfabeto[0], alfabeto[0], 90)
-    monkeypatch.setattr(ocr, "reconhecer_caractere", motor)
+        return e7_motor_ocr.Leitura(alfabeto[0], alfabeto[0], 90)
+    monkeypatch.setattr(e7_motor_ocr, "reconhecer_caractere", motor)
     reconhecer(segmentacao, formato)
     assert permitidos[:3] == ["ABCDEFGHIJKLMNOPQRSTUVWXYZ"] * 3
     assert permitidos[3] == permitidos[5] == permitidos[6] == "0123456789"
@@ -175,10 +175,10 @@ def test_restricao_por_posicao(monkeypatch, segmentacao, formato, posicao4):
 
 def test_motor_ausente_tem_mensagem_clara(monkeypatch):
     def ausente():
-        raise ocr.pytesseract.TesseractNotFoundError()
-    monkeypatch.setattr(ocr.pytesseract, "get_tesseract_version", ausente)
+        raise e7_motor_ocr.pytesseract.TesseractNotFoundError()
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "get_tesseract_version", ausente)
     with pytest.raises(RuntimeError, match="Tesseract não encontrado"):
-        ocr.verificar_tesseract()
+        e7_motor_ocr.verificar_tesseract()
 
 
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Motor Tesseract não instalado")
@@ -193,7 +193,7 @@ def test_interface_exemplo_sem_motor(monkeypatch):
     from streamlit.testing.v1 import AppTest
     def ausente():
         raise RuntimeError("Tesseract não encontrado")
-    monkeypatch.setattr(ocr, "verificar_tesseract", ausente)
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", ausente)
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"))
     app.run(timeout=60)
     assert not app.exception
@@ -205,9 +205,9 @@ def test_interface_exemplo_sem_motor(monkeypatch):
 def test_interface_exibe_resultado_com_tesseract(monkeypatch):
     from streamlit.testing.v1 import AppTest
     letras = iter("ABC1D23")
-    from placas.etapas import e7_ocr as ocr
-    monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data",
+    from placas.etapas import e7_decisao, e7_motor_ocr
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", lambda: "teste")
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data",
                         lambda *a, **kw: {"text": [next(letras)], "conf": [92]})
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"))
     app.run(timeout=60)

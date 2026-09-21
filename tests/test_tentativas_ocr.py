@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from examples.gerar_exemplo import criar_veiculo
-from placas.etapas import e7_ocr as ocr
+from placas.etapas import e7_decisao, e7_motor_ocr
 from placas.saida.exportacao import imagens_das_tentativas
 from placas.etapas.e6_normalizacao import preparar_caractere
 from placas.etapas.e6_variacoes import gerar_variacoes
@@ -25,13 +25,13 @@ def motor_controlado(monkeypatch, respostas):
         assert any(f"--psm {modo}" in kwargs["config"] for modo in (10, 13))
         bruto, confianca = next(valores, ("", -1))
         return {"text": [bruto], "conf": [confianca]}
-    monkeypatch.setattr(ocr.pytesseract, "image_to_data", motor)
+    monkeypatch.setattr(e7_motor_ocr.pytesseract, "image_to_data", motor)
     return chamadas
 
 
 def test_primeira_leitura_forte_nao_dispara_novas_tentativas(monkeypatch, segmentacao):
     chamadas = motor_controlado(monkeypatch, [("A", 90)])
-    leitura = ocr.reconhecer_com_tentativas(preparar_caractere(segmentacao.caracteres[0]))
+    leitura = e7_decisao.reconhecer_com_tentativas(preparar_caractere(segmentacao.caracteres[0]))
     assert leitura.caractere == "A"
     assert len(chamadas) == len(leitura.tentativas) == 1
 
@@ -47,7 +47,7 @@ def test_primeira_leitura_forte_nao_dispara_novas_tentativas(monkeypatch, segmen
 def test_concordancia_e_abstencao(monkeypatch, segmentacao, respostas, esperado):
     entrada = preparar_caractere(segmentacao.caracteres[0])
     chamadas = motor_controlado(monkeypatch, respostas)
-    leitura = ocr.reconhecer_com_tentativas(entrada)
+    leitura = e7_decisao.reconhecer_com_tentativas(entrada)
     assert leitura.caractere == esperado
     assert len(chamadas) == len(leitura.tentativas)
     assert len(chamadas) in (6, 12)
@@ -63,7 +63,7 @@ def test_concordancia_e_abstencao(monkeypatch, segmentacao, respostas, esperado)
 
 def test_alfabeto_restrito_nao_preenche_resposta_ausente(monkeypatch, segmentacao):
     chamadas = motor_controlado(monkeypatch, [("A", 99)] * 6)
-    leitura = ocr.reconhecer_com_tentativas(preparar_caractere(segmentacao.caracteres[0]), "0123456789")
+    leitura = e7_decisao.reconhecer_com_tentativas(preparar_caractere(segmentacao.caracteres[0]), "0123456789")
     assert leitura.caractere == "?"
     assert len(chamadas) == 12
     assert all(t.caractere == "?" for t in leitura.tentativas)
@@ -83,7 +83,7 @@ def test_contagem_e_exportacao_correspondem_as_chamadas(monkeypatch, segmentacao
     respostas = [("", -1), ("A", 82), ("A", 85), ("", -1), ("", -1), ("", -1)]
     respostas += [(c, 90) for c in "BC1D23"]
     chamadas = motor_controlado(monkeypatch, respostas)
-    monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", lambda: "teste")
     resultado = reconhecer(segmentacao)
     assert resultado["texto"] == "ABC1D23"
     assert resultado["quantidade_chamadas_ocr"] == len(chamadas) == 12
@@ -96,10 +96,10 @@ def test_contagem_e_exportacao_correspondem_as_chamadas(monkeypatch, segmentacao
 
 def test_interface_mostra_historico_das_tentativas(monkeypatch):
     from streamlit.testing.v1 import AppTest
-    from placas.etapas import e7_ocr as ocr
+    from placas.etapas import e7_decisao, e7_motor_ocr
     from placas.modelos import Leitura
-    monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
-    monkeypatch.setattr(ocr, "reconhecer_caracteres",
+    monkeypatch.setattr(e7_motor_ocr, "verificar_tesseract", lambda: "teste")
+    monkeypatch.setattr(e7_decisao, "reconhecer_caracteres",
                         lambda entradas, formato: [Leitura(c, c, 90) for c in "ABC1D23"])
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"))
     app.run(timeout=60)
@@ -121,7 +121,7 @@ def test_interface_mostra_historico_das_tentativas(monkeypatch):
 def test_modo_alternativo_preserva_recortes_e_validacao(monkeypatch, segmentacao, alternativas, esperado):
     entrada = preparar_caractere(segmentacao.caracteres[0])
     chamadas = motor_controlado(monkeypatch, [("", -1)] * 6 + alternativas)
-    leitura = ocr.reconhecer_com_tentativas(entrada)
+    leitura = e7_decisao.reconhecer_com_tentativas(entrada)
     assert leitura.caractere == esperado
     assert [t.psm for t in leitura.tentativas] == [10] * 6 + [13] * 6
     for primeira, alternativa in zip(chamadas[:6], chamadas[6:]):

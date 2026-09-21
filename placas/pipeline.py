@@ -6,7 +6,7 @@ A interface pode parar após a segmentação para inspecionar os recortes sem OC
 import numpy as np
 
 from placas.config import NOME_DO_MOTOR
-from placas.etapas import e7_ocr as ocr
+from placas.etapas import e7_decisao, e7_motor_ocr
 from placas.etapas.e1_preparacao import preparar_imagem
 from placas.etapas.e2_bordas import encontrar_bordas
 from placas.etapas.e3_morfologia import aplicar_morfologia
@@ -27,12 +27,13 @@ def localizar(imagem: np.ndarray) -> Localizacao:
 def reconhecer(segmentacao: Segmentacao, formato: str = "livre") -> dict:
     """Executa as etapas 6–8 somente depois que existe uma segmentação."""
     entradas = preparar_recortes(segmentacao)                # 6 · Validação e recortes
-    leituras = ocr.reconhecer_caracteres(entradas, formato)    # 7 · OCR individual
+    leituras = e7_decisao.reconhecer_caracteres(entradas, formato)  # 7 · OCR individual
     if any(leitura.caractere == '?' for leitura in leituras):
         cinzas = preparar_cinza(segmentacao)
         for indice, leitura in enumerate(leituras):
-            leituras[indice] = ocr.recuperar_com_cinza(
-                leitura, cinzas[indice], ocr.alfabeto_por_posicao(indice, formato))
+            leituras[indice] = e7_decisao.recuperar_com_cinza(
+                leitura, cinzas[indice],
+                e7_motor_ocr.alfabeto_por_posicao(indice, formato))
     resultado = consolidar_resultado(leituras, formato)
     resultado["motor"] = NOME_DO_MOTOR
     return resultado            # 8 · Arrays e resultado

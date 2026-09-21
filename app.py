@@ -12,7 +12,7 @@ from interface.passos import exibir_passos
 from placas.etapas.e6_normalizacao import preparar_caractere
 from placas.etapas.e6_recortes import preparar_recortes
 from placas.validacao import validar_segmentacao
-from placas.etapas.e7_ocr import verificar_tesseract
+from placas.etapas.e7_motor_ocr import verificar_tesseract
 from placas.imagem import ler_imagem
 from placas.pipeline import localizar, reconhecer
 from placas.saida.exportacao import imagens_das_tentativas

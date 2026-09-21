@@ -7,7 +7,7 @@ import pytest
 
 from placas.etapas.e6_inclinacao import corrigir_inclinacao
 from placas.validacao import validar_entrada_ocr
-from placas.etapas.e7_ocr import reconhecer_caracteres
+from placas.etapas.e7_decisao import reconhecer_caracteres
 
 
 def recortes():
