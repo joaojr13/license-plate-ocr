@@ -128,7 +128,7 @@ def corrigir_inclinacao(entradas: list[np.ndarray]) -> list[np.ndarray]:
 
 def validar_entrada_ocr(imagem: np.ndarray) -> None:
     """Aceita somente um símbolo binário com altura 100 e margem conhecida."""
-    if imagem.ndim != 2 or imagem.dtype != np.uint8 or imagem.shape[0] not in (120, 140, 160, 180):
+    if imagem.ndim != 2 or imagem.dtype != np.uint8 or imagem.shape[0] not in (120, 140, 160):
         raise ValueError("O OCR aceita somente um recorte preparado na etapa 6.")
     margem = (imagem.shape[0] - 100) // 2
     largura = imagem.shape[1] - 2 * margem
@@ -142,7 +142,7 @@ def validar_entrada_ocr(imagem: np.ndarray) -> None:
         raise ValueError("O OCR exige exatamente um componente por recorte.")
 
 
-def gerar_variacoes(entrada: np.ndarray, margem_ampliada: bool = False) -> dict[str, np.ndarray]:
+def gerar_variacoes(entrada: np.ndarray) -> dict[str, np.ndarray]:
     """Até seis preparos do MESMO caractere; nenhuma placa é acessada aqui.
 
     Base: altura 100 e margem 20. Outras margens: 10 e 30. A dilatação
@@ -169,10 +169,4 @@ def gerar_variacoes(entrada: np.ndarray, margem_ampliada: bool = False) -> dict[
                 continue
             if not any(np.array_equal(imagem, existente) for existente in candidatas.values()):
                 candidatas[nome] = imagem
-    if margem_ampliada:
-        # Mais contexto branco, sem alterar proporção nem traços do símbolo.
-        ampliada = cv2.copyMakeBorder(letra, 40, 40, 40, 40,
-                                     cv2.BORDER_CONSTANT, value=255)
-        validar_entrada_ocr(ampliada)
-        candidatas["margem_40"] = ampliada
     return candidatas

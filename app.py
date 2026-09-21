@@ -25,7 +25,6 @@ with st.sidebar:
     arquivo = st.file_uploader("Foto do veículo", type=["jpg", "jpeg", "png", "webp"])
     demonstracao = st.checkbox("Usar exemplo sintético", value=False)
     formato = "livre"
-    motor = "tesseract"
     st.caption("OCR: Tesseract · processamento local")
     st.info("Cada chamada ao OCR recebe somente um caractere isolado.")
     try:
@@ -49,7 +48,7 @@ else:
 
 
 @st.cache_data(show_spinner="Localizando a placa e separando os caracteres…", max_entries=5)
-def analisar(dados: bytes, versao_segmentacao: str = "linha-inclinada-v2"):
+def analisar(dados: bytes, versao_segmentacao: str = "candidatas-morfologia-v4"):
     """Executa as etapas 1–5 dos módulos de processamento e guarda o resultado."""
     return localizar(ler_imagem(dados))
 
@@ -61,7 +60,7 @@ except ValueError as exc:
     st.stop()
 
 segmentacao = localizacao.segmentacao
-chave = hashlib.sha256(conteudo + formato.encode() + motor.encode() + b"ocr-linha-inclinada-v2").hexdigest()
+chave = hashlib.sha256(conteudo + formato.encode() + b"tesseract-unico-v1").hexdigest()
 if st.session_state.get("chave") != chave:
     st.session_state["chave"] = chave
     st.session_state.pop("resultado", None)
@@ -94,7 +93,7 @@ if st.button("Reconhecer caracteres", type="primary", disabled=not (valida and m
     st.session_state.pop("resultado", None)
     try:
         with st.spinner("Reconhecendo caracteres e conferindo as leituras incertas…"):
-            st.session_state["resultado"] = reconhecer(segmentacao, formato, motor)
+            st.session_state["resultado"] = reconhecer(segmentacao, formato)
     except (ValueError, RuntimeError, OSError) as exc:
         st.error(f"Não foi possível concluir o OCR: {exc}")
 

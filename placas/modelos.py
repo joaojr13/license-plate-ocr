@@ -29,11 +29,22 @@ class Segmentacao:
 
 
 @dataclass
+class CandidataPlaca:
+    caixa: Box
+    qualidade: float
+    quantidade_caracteres: int
+    metodo: str
+
+
+@dataclass
 class Localizacao:
     imagem: np.ndarray
     caixa: Box
     segmentacao: Segmentacao
     etapas: dict[str, np.ndarray]
+    candidatas: list[CandidataPlaca] = field(default_factory=list)
+    total_candidatas: int = 0
+    candidatas_morfologia: dict[str, list[Box]] = field(default_factory=dict)
 
 
 @dataclass
@@ -42,7 +53,7 @@ class TentativaOCR:
     caractere: str
     bruto: str
     confianca: float
-    psm: int | None = 10
+    psm: int = 10
     motor: str = "tesseract"
 
 

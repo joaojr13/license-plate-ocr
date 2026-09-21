@@ -4,7 +4,8 @@ Este módulo apenas mostra dados já produzidos. Não executa filtros nem OCR.
 """
 import streamlit as st
 
-from placas.visualizacao import desenhar_localizacao, desenhar_segmentacao
+from placas.visualizacao import (desenhar_localizacao, desenhar_segmentacao,
+                                desenhar_candidatas, desenhar_regioes_morfologia)
 
 
 def exibir_preparacao(localizacao):
@@ -60,6 +61,19 @@ def exibir_morfologia(localizacao):
                 ]):
                     colunas[i % 2].image(localizacao.etapas[f"{nome} {tamanho}"],
                                         caption=legenda, width="stretch")
+                st.markdown(f'**Regiões candidatas geradas por {operacao} {tamanho}×7**')
+                tipo = st.radio('Margens das regiões', ['Sem margem extra', 'Com margem extra'],
+                                horizontal=True, key=f'margens_{operacao}_{tamanho}')
+                caixas = localizacao.candidatas_morfologia.get(f'{operacao} {tamanho} · {tipo}', [])
+                st.image(desenhar_regioes_morfologia(localizacao.imagem, caixas),
+                         channels='BGR', width='stretch',
+                         caption=f'{len(caixas)} regiões candidatas · {operacao} {tamanho}×7 · {tipo.lower()}')
+                if not caixas:
+                    st.info('Nenhuma região dessa operação passou pelos filtros de tamanho e proporção nessa opção.')
+                st.caption('Retângulos amarelos: contornos da máscara final desta operação que passaram '
+                           'pelos filtros geométricos. Ainda são candidatas, não placas confirmadas. '
+                           'Na etapa 4, elas são comparadas com as regiões das outras operações e das bordas. '
+                           'Alternar as margens muda apenas esta visualização; as duas opções já foram avaliadas.')
         st.info("O fechamento não sabe o que é uma placa. Ele gera regiões que serão avaliadas na próxima etapa.")
 
 
@@ -82,6 +96,54 @@ def exibir_localizacao(localizacao):
                    f"Pontuação geométrica: {segmentacao.qualidade:.2f}. Não é uma probabilidade de acerto.")
         st.write("Uma região com objetos parecidos com letras pode ser escolhida incorretamente. "
                  "Por isso, é importante conferir o recorte.")
+        if localizacao.candidatas:
+            st.markdown('**Recortes comparados na escolha da placa**')
+            st.caption(f'{localizacao.total_candidatas} regiões avaliadas; abaixo estão até cinco '
+                       'candidatas distintas. Regiões muito sobrepostas foram agrupadas apenas '
+                       'para exibição. A pontuação não é uma probabilidade.')
+            for inicio in range(0, len(localizacao.candidatas), 3):
+                colunas = st.columns(3)
+                for deslocamento, candidata in enumerate(localizacao.candidatas[inicio:inicio+3]):
+                    numero = inicio + deslocamento + 1
+                    cx, cy, cw, ch = candidata.caixa
+                    with colunas[deslocamento]:
+                        with st.container(border=True):
+                            st.markdown(f'**Candidata {numero}**')
+                            st.image(localizacao.imagem[cy:cy+ch, cx:cx+cw],
+                                     channels='BGR', width='stretch',
+                                     caption=f'Recorte da candidata {numero}')
+                            if candidata.caixa == localizacao.caixa:
+                                st.success('Escolhida pelo sistema')
+                            elif candidata.quantidade_caracteres < 4:
+                                st.caption('Descartada: menos de 4 componentes')
+                            else:
+                                st.caption('Não escolhida')
+                            st.write(f'Pontuação: **{candidata.qualidade:.2f}** · '
+                                     f'Componentes: **{candidata.quantidade_caracteres}**')
+                            st.caption(f'Binarização: {candidata.metodo}')
+        if localizacao.candidatas and st.checkbox('Ver regiões candidatas', key='ver_candidatas'):
+            st.image(desenhar_candidatas(localizacao), channels='BGR', width='stretch',
+                     caption='Verde: região escolhida · Amarelo: outras regiões avaliadas')
+            st.caption(f'{localizacao.total_candidatas} regiões avaliadas. Exibindo até cinco distintas, '
+                       'ordenadas por pontuação, com a escolhida em primeiro lugar. Regiões muito '
+                       'sobrepostas foram agrupadas apenas nesta visualização.')
+            st.dataframe([
+                {'Candidata': i, 'Pontuação': round(c.qualidade, 2),
+                 'Caracteres encontrados': c.quantidade_caracteres,
+                 'Situação': ('Escolhida' if c.caixa == localizacao.caixa else
+                              'Descartada: menos de 4 caracteres' if c.quantidade_caracteres < 4 else
+                              'Outra candidata'), 'Binarização': c.metodo}
+                for i, c in enumerate(localizacao.candidatas, 1)
+            ], hide_index=True, width='stretch')
+            st.caption('Pontuação geométrica e de segmentação; não é probabilidade. Nenhuma candidata '
+                       'é enviada ao OCR nesta etapa.')
+            numero = st.selectbox('Ampliar candidata', range(1, len(localizacao.candidatas)+1),
+                                  format_func=lambda i: f'Candidata {i}', key='candidata_ampliada')
+            candidata = localizacao.candidatas[numero-1]
+            cx, cy, cw, ch = candidata.caixa
+            st.image(localizacao.imagem[cy:cy+ch, cx:cx+cw], channels='BGR', width='stretch',
+                     caption=f'Candidata {numero} · x={cx}, y={cy}, largura={cw}, altura={ch}')
+            st.caption('A seleção acima serve apenas para inspecionar o recorte; a placa escolhida pelo sistema permanece a mesma.')
 
 
 def exibir_segmentacao(segmentacao):

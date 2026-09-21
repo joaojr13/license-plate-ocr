@@ -4,6 +4,7 @@ Leia este arquivo primeiro; cada chamada leva ao módulo da etapa correspondente
 A interface pode parar após a segmentação para inspecionar os recortes sem OCR.
 """
 import numpy as np
+from placas import ocr
 
 from placas.bordas import encontrar_bordas
 from placas.localizacao import selecionar_placa
@@ -22,32 +23,15 @@ def localizar(imagem: np.ndarray) -> Localizacao:
     return selecionar_placa(preparada, bordas, morfologia)     # 4 · Seleção + 5 · Segmentação
 
 
-def reconhecer(segmentacao: Segmentacao, formato: str = "livre", motor: str = "tesseract") -> dict:
+def reconhecer(segmentacao: Segmentacao, formato: str = "livre") -> dict:
     """Executa as etapas 6–8 somente depois que existe uma segmentação."""
     entradas = preparar_recortes(segmentacao)                # 6 · Validação e recortes
-    if motor == "hibrido":
-        from placas import ocr_hibrido
-        leituras = ocr_hibrido.reconhecer_caracteres(entradas, formato)
-    elif motor == "google":
-        from placas import ocr_google
-        leituras = ocr_google.reconhecer_caracteres(entradas, formato)
-    elif motor == "easyocr":
-        from placas import ocr_easyocr
-        leituras = ocr_easyocr.reconhecer_caracteres(entradas, formato)
-    elif motor == "tesseract":
-        from placas import ocr
-        leituras = ocr.reconhecer_caracteres(entradas, formato)
-        if any(leitura.caractere == '?' for leitura in leituras):
-            import string
-            cinzas = preparar_cinza(segmentacao)
-            for indice, leitura in enumerate(leituras):
-                permitidos = ocr.ALFABETO
-                if formato != 'livre':
-                    letra = indice < 3 or (formato == 'mercosul' and indice == 4)
-                    permitidos = string.ascii_uppercase if letra else string.digits
-                leituras[indice] = ocr.recuperar_com_cinza(leitura, cinzas[indice], permitidos)
-    else:
-        raise ValueError("Motor de OCR desconhecido.")
+    leituras = ocr.reconhecer_caracteres(entradas, formato)    # 7 · OCR individual
+    if any(leitura.caractere == '?' for leitura in leituras):
+        cinzas = preparar_cinza(segmentacao)
+        for indice, leitura in enumerate(leituras):
+            leituras[indice] = ocr.recuperar_com_cinza(
+                leitura, cinzas[indice], ocr.alfabeto_por_posicao(indice, formato))
     resultado = consolidar_resultado(leituras, formato)
-    resultado["motor"] = motor
+    resultado["motor"] = "tesseract"
     return resultado            # 8 · Arrays e resultado

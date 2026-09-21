@@ -12,6 +12,16 @@ ALFABETO = string.ascii_uppercase + string.digits
 CONFIANCA_MINIMA = 60.0
 
 
+def alfabeto_por_posicao(indice: int, formato: str) -> str:
+    """Na página, o formato livre permite sempre letras e números."""
+    if formato == 'livre':
+        return ALFABETO
+    if formato not in {'antiga', 'mercosul'}:
+        raise ValueError('Formato desconhecido.')
+    letra = indice < 3 or (formato == 'mercosul' and indice == 4)
+    return string.ascii_uppercase if letra else string.digits
+
+
 def verificar_tesseract() -> str:
     caminho = os.environ.get("TESSERACT_CMD")
     if caminho:
@@ -121,9 +131,6 @@ def reconhecer_caracteres(entradas: list[np.ndarray], formato: str = "livre") ->
     verificar_tesseract()
     leituras = []
     for indice, imagem_individual in enumerate(entradas):
-        permitidos = ALFABETO
-        if formato != "livre":
-            letra = indice < 3 or (formato == "mercosul" and indice == 4)
-            permitidos = string.ascii_uppercase if letra else string.digits
+        permitidos = alfabeto_por_posicao(indice, formato)
         leituras.append(reconhecer_com_tentativas(imagem_individual, permitidos))
     return leituras

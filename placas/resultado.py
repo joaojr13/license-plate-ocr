@@ -12,7 +12,6 @@ def consolidar_resultado(leituras: list[Leitura], formato: str = "livre") -> dic
     padroes = {
         "antiga": r"[A-Z]{3}[0-9]{4}",
         "mercosul": r"[A-Z]{3}[0-9][A-Z][0-9]{2}",
-        "quatro_letras": r"[A-Z]{4}[0-9]{3}",
         "livre": r"(?:[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})|[A-Z]{4}[0-9]{3})",
     }
     padrao_valido = bool(re.fullmatch(padroes[formato], texto))

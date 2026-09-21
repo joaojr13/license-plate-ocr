@@ -82,7 +82,7 @@ def test_contagem_e_exportacao_correspondem_as_chamadas(monkeypatch, segmentacao
     respostas += [(c, 90) for c in "BC1D23"]
     chamadas = motor_controlado(monkeypatch, respostas)
     monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
-    resultado = reconhecer(segmentacao, motor="tesseract")
+    resultado = reconhecer(segmentacao)
     assert resultado["texto"] == "ABC1D23"
     assert resultado["quantidade_chamadas_ocr"] == len(chamadas) == 12
     assert [len(l["tentativas"]) for l in resultado["leituras"]] == [6, 1, 1, 1, 1, 1, 1]

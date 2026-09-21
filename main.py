@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="OCR individual de caracteres de placas.")
     parser.add_argument("imagem", type=Path)
     parser.add_argument("--saida", type=Path, default=Path("output/leitura"))
-    parser.add_argument("--formato", choices=["livre", "antiga", "mercosul", "quatro_letras"], default="livre")
+    parser.add_argument("--formato", choices=["livre", "antiga", "mercosul"], default="livre")
     parser.add_argument("--somente-segmentar", action="store_true", help="Inspeciona etapas sem executar OCR.")
     args = parser.parse_args()
     try:

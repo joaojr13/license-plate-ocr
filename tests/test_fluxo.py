@@ -93,7 +93,7 @@ def test_sete_chamadas_com_imagens_individuais(monkeypatch, segmentacao):
         return {"text": ["", next(valores)], "conf": [-1, 92]}
 
     monkeypatch.setattr(ocr.pytesseract, "image_to_data", motor)
-    resultado = reconhecer(segmentacao, motor="tesseract")
+    resultado = reconhecer(segmentacao)
     assert resultado["caracteres"] == list("ABC1D23")
     assert resultado["placas"] == ["ABC1D23"]
     assert resultado["texto"] == "ABC1D23"
@@ -166,7 +166,7 @@ def test_restricao_por_posicao(monkeypatch, segmentacao, formato, posicao4):
         permitidos.append(alfabeto)
         return ocr.Leitura(alfabeto[0], alfabeto[0], 90)
     monkeypatch.setattr(ocr, "reconhecer_caractere", motor)
-    reconhecer(segmentacao, formato, motor="tesseract")
+    reconhecer(segmentacao, formato)
     assert permitidos[:3] == ["ABCDEFGHIJKLMNOPQRSTUVWXYZ"] * 3
     assert permitidos[3] == permitidos[5] == permitidos[6] == "0123456789"
     assert permitidos[4] == posicao4
@@ -182,7 +182,7 @@ def test_motor_ausente_tem_mensagem_clara(monkeypatch):
 
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Motor Tesseract não instalado")
 def test_ocr_real_quando_disponivel(segmentacao):
-    resultado = reconhecer(segmentacao, "mercosul", motor="tesseract")
+    resultado = reconhecer(segmentacao, "mercosul")
     assert 7 <= resultado["quantidade_chamadas_ocr"] <= 84
     assert len(resultado["caracteres"]) == 7
     # Este teste verifica a integração; não presume acurácia do motor.
@@ -205,17 +205,6 @@ def test_interface_exibe_resultado_com_tesseract(monkeypatch):
     from streamlit.testing.v1 import AppTest
     letras = iter("ABC1D23")
     from placas import ocr
-    class Motor:
-        def text_detection(self, **kw):
-            from types import SimpleNamespace
-            simbolo = SimpleNamespace(confidence=.92)
-            palavra = SimpleNamespace(symbols=[simbolo])
-            paragrafo = SimpleNamespace(words=[palavra])
-            bloco = SimpleNamespace(paragraphs=[paragrafo])
-            pagina = SimpleNamespace(blocks=[bloco])
-            return SimpleNamespace(error=SimpleNamespace(message=""),
-                                   text_annotations=[SimpleNamespace(description=next(letras))],
-                                   full_text_annotation=SimpleNamespace(pages=[pagina]))
     monkeypatch.setattr(ocr, "verificar_tesseract", lambda: "teste")
     monkeypatch.setattr(ocr.pytesseract, "image_to_data",
                         lambda *a, **kw: {"text": [next(letras)], "conf": [92]})

@@ -2,8 +2,27 @@
 import cv2
 import numpy as np
 
-from placas.modelos import Box, ImagemPreparada, Localizacao
+from placas.modelos import Box, CandidataPlaca, ImagemPreparada, Localizacao
 from placas.segmentacao import segmentar
+
+
+def _sobreposicao(a: Box, b: Box) -> float:
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    intersecao = max(0, min(ax+aw, bx+bw)-max(ax, bx)) * max(0, min(ay+ah, by+bh)-max(ay, by))
+    return intersecao / (aw*ah + bw*bh - intersecao)
+
+
+def candidatas_para_exibir(candidatas: list[CandidataPlaca], escolhida: Box) -> list[CandidataPlaca]:
+    """Reduz sobreposição apenas na visualização; não altera a seleção da placa."""
+    ordenadas = sorted(candidatas, key=lambda c: (c.caixa == escolhida, c.qualidade), reverse=True)
+    distintas = []
+    for candidata in ordenadas:
+        if all(_sobreposicao(candidata.caixa, outra.caixa) < 0.5 for outra in distintas):
+            distintas.append(candidata)
+        if len(distintas) == 5:
+            break
+    return distintas
 
 
 def _caixas(mask: np.ndarray, expandir: bool = False) -> list[Box]:
@@ -38,13 +57,19 @@ def selecionar_placa(preparada: ImagemPreparada, bordas: np.ndarray,
     etapas = {"Cinza": preparada.cinza, "Suavização": preparada.suave, "Bordas": bordas}
     etapas.update(morfologia)
     candidatos = _caixas(bordas)
+    candidatas_morfologia = {}
     for tamanho in [17, 31]:
         for nome in ["Black-hat", "Top-hat"]:
             mascara = morfologia[f"{nome} · Abertura {tamanho}"]
             # Alguns contornos já abrangem a placa inteira; outros só as letras.
-            candidatos.extend(_caixas(mascara))
-            candidatos.extend(_caixas(mascara, expandir=True))
+            for expandir, tipo in [(False, 'Sem margem extra'), (True, 'Com margem extra')]:
+                caixas = _caixas(mascara, expandir=expandir)
+                candidatos.extend(caixas)
+                # Preserva a origem antes da união entre operações. Remove apenas
+                # duplicatas exatas para desenhar as regiões da mesma fonte uma vez.
+                candidatas_morfologia[f'{nome} {tamanho} · {tipo}'] = list(dict.fromkeys(caixas))
     melhor = None
+    avaliadas = []
     vistos = set()
     for caixa in candidatos:
         if caixa in vistos:
@@ -52,6 +77,8 @@ def selecionar_placa(preparada: ImagemPreparada, bordas: np.ndarray,
         vistos.add(caixa)
         x, y, cw, ch = caixa
         segmentacao = segmentar(trabalho[y:y+ch, x:x+cw])
+        avaliadas.append(CandidataPlaca(caixa, segmentacao.qualidade,
+                                        len(segmentacao.caracteres), segmentacao.metodo))
         if len(segmentacao.caracteres) < 4:
             continue
         if melhor is None or segmentacao.qualidade > melhor.segmentacao.qualidade:
@@ -59,4 +86,7 @@ def selecionar_placa(preparada: ImagemPreparada, bordas: np.ndarray,
     if melhor is None:
         raise ValueError("Não foi encontrada uma região de placa plausível. "
                          "Use uma foto frontal, nítida e com a placa maior na imagem.")
+    melhor.candidatas = candidatas_para_exibir(avaliadas, melhor.caixa)
+    melhor.total_candidatas = len(avaliadas)
+    melhor.candidatas_morfologia = candidatas_morfologia
     return melhor
