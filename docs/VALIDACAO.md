@@ -4,6 +4,10 @@ Execute `.venv/bin/python -m pytest -q`. Os testes incluem segmentação, preser
 de um caractere por chamada, consenso/conflitos, exportação e interface. Testes de OCR real exigem
 o executável Tesseract e dados `eng`; são pulados quando o executável não está instalado.
 
+Os resultados de referência abaixo foram verificados antes e depois da reorganização do código
+em `placas/etapas/`, comparando o texto reconhecido, as caixas, o método de binarização, a
+pontuação, as mensagens de erro e o hash de cada imagem intermediária e exportada.
+
 ## Casos de referência
 
 | Entrada | Resultado validado antes da refatoração |

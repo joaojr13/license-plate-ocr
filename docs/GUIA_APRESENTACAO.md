@@ -1,7 +1,15 @@
 # Guia para explicar o projeto
 
-Comece por `placas/processamento.py`: ele coordena as oito etapas mostradas na página.
+Comece por `placas/pipeline.py`: ele tem duas funções, `localizar()` e `reconhecer()`, e cada
+linha delas leva ao arquivo da etapa correspondente em `placas/etapas/`, numerado de e1 a e8.
 O código usa OpenCV para localizar/segmentar e somente Tesseract para reconhecer caracteres.
+
+Três arquivos ajudam a responder perguntas durante a apresentação:
+
+- `placas/config.py` — todos os números citados aqui (limiares, tamanhos, margens, ângulos),
+  agrupados por etapa. Se perguntarem "de onde vem esse 60?", a resposta está nesse arquivo.
+- `placas/validacao.py` — as três recusas que impedem a placa inteira de chegar ao OCR.
+- `placas/etapas/e7_motor_ocr.py` — o único arquivo do projeto que importa `pytesseract`.
 
 ## 1. Preparação
 
@@ -43,7 +51,9 @@ boxes individuais, preservando detalhes que a binarização pode eliminar.
 
 ## 7. OCR
 
-`reconhecer_caractere` é o único ponto que chama `pytesseract.image_to_data`.
+`reconhecer_caractere`, em `placas/etapas/e7_motor_ocr.py`, é o único ponto que chama
+`pytesseract.image_to_data`. As regras que decidem aceitar ou recusar a resposta estão
+separadas, em `placas/etapas/e7_decisao.py`, e nunca conversam com o motor.
 PSM 10 indica símbolo único; PSM 13 é alternativa de interpretação. Ambos recebem somente
 um caractere. O modo, sozinho, não garante o cumprimento da restrição: os recortes são validados antes.
 

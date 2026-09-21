@@ -21,21 +21,48 @@ streamlit run app.py
 `pytesseract` é a biblioteca que chama o programa Tesseract; não instala esse programa.
 As versões fixadas do ambiente de referência estão em `requirements-lock.txt`.
 
+## Como o código está organizado
+
+```
+app.py                      a página, em uma tela: cada linha é uma etapa
+main.py                     a mesma leitura pelo terminal
+placas/
+  config.py                 todos os parâmetros numéricos, agrupados por etapa
+  pipeline.py               o mapa do fluxo: quem chama quem, na ordem
+  modelos.py                as estruturas de dados compartilhadas
+  imagem.py                 leitura do arquivo e orientação EXIF
+  validacao.py              as recusas que protegem o OCR
+  etapas/                   uma etapa por arquivo, de e1 a e8
+  saida/                    desenho das marcações e exportação dos recortes
+interface/
+  componentes.py            os blocos visuais da página principal
+  passos.py                 a estrutura das oito seções do passo a passo
+  textos.py                 os textos didáticos, fora do código
+```
+
+Comece por `placas/pipeline.py`: ele tem duas funções, `localizar()` e `reconhecer()`,
+e cada linha delas leva ao arquivo da etapa correspondente.
+
 ## Oito etapas da página
 
-| Etapa | Responsabilidade | Módulo |
+| Etapa | Responsabilidade | Arquivo |
 |---|---|---|
-| 1 | Redimensionar, converter para cinza e suavizar | `placas/preparacao.py` |
-| 2 | Detectar e conectar bordas | `placas/bordas.py` |
-| 3 | Black-hat/top-hat, limiarização, fechamento e abertura | `placas/morfologia.py` |
-| 4 | Avaliar regiões e escolher a melhor candidata | `placas/localizacao.py` |
-| 5 | Separar componentes e encontrar a linha de caracteres | `placas/segmentacao.py` |
-| 6 | Validar recortes, normalizar e corrigir inclinação | `placas/preparacao_ocr.py` |
-| 7 | Reconhecer cada caractere pelo Tesseract | `placas/ocr.py` |
-| 8 | Concatenar, formar arrays e emitir avisos | `placas/resultado.py` |
+| 1 | Redimensionar, converter para cinza e suavizar | `placas/etapas/e1_preparacao.py` |
+| 2 | Detectar e conectar bordas | `placas/etapas/e2_bordas.py` |
+| 3 | Black-hat/top-hat, limiarização, fechamento e abertura | `placas/etapas/e3_morfologia.py` |
+| 4 | Avaliar regiões e escolher a melhor candidata | `placas/etapas/e4_localizacao.py` |
+| 5 | Separar componentes e encontrar a linha de caracteres | `placas/etapas/e5_segmentacao.py` |
+| 6 | Validar recortes, normalizar e corrigir inclinação | `placas/etapas/e6_recortes.py` |
+| 7 | Reconhecer cada caractere pelo Tesseract | `placas/etapas/e7_decisao.py` |
+| 8 | Concatenar, formar arrays e emitir avisos | `placas/etapas/e8_resultado.py` |
 
-`placas/processamento.py` coordena essas etapas. `interface/passos.py` apresenta os resultados;
-`placas/visualizacao.py` desenha as marcações e `placas/exportacao.py` reconstrói as entradas do OCR.
+A etapa 6 se apoia em três arquivos vizinhos: `e6_normalizacao.py` põe o símbolo no formato
+padrão, `e6_inclinacao.py` corrige o ângulo e `e6_variacoes.py` gera os preparos alternativos.
+A etapa 7 é dividida em dois: `e7_motor_ocr.py` é o único arquivo que fala com o Tesseract, e
+`e7_decisao.py` contém as regras que aceitam ou recusam uma leitura, sem chamar o motor.
+
+`placas/saida/visualizacao.py` desenha as marcações e `placas/saida/exportacao.py` reconstrói
+as entradas do OCR para o download.
 
 Na etapa 3, cada aba mostra as regiões originadas por aquela operação e kernel, com ou sem margem.
 Na etapa 4, uma galeria mostra até cinco candidatas distintas com recorte, pontuação e número de
@@ -79,6 +106,10 @@ incluindo margens, modos e tons de cinza. O resultado contém `caracteres`, `tex
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
+
+Todos os limiares e tamanhos citados acima estão em `placas/config.py`, com um comentário
+de uma linha cada: é lá que se ajusta o comportamento, não no meio da lógica.
+Para conferir o estilo do código: `python -m pip install ruff && ruff check .`
 
 Consulte [o guia da apresentação](docs/GUIA_APRESENTACAO.md) e [a validação](docs/VALIDACAO.md).
 O protótipo espera sete caracteres em uma linha. Reflexos, desfoque, perspectiva acentuada e
