@@ -109,6 +109,20 @@ python -m pytest -q
 
 Todos os limiares e tamanhos citados acima estão em `placas/config.py`, com um comentário
 de uma linha cada: é lá que se ajusta o comportamento, não no meio da lógica.
+
+## Versão publicada
+
+O deploy no Streamlit Community Cloud usa `environment.yml`, não `packages.txt`. O motivo é a
+versão do motor: aquele ambiente roda Debian 11, cujo apt só oferece Tesseract 4.1.1 — uma
+geração anterior, que lê as mesmas imagens de outro jeito. O `environment.yml` traz o Tesseract
+**5.5.3** do conda-forge, a mesma versão que o `brew install tesseract` instala hoje no macOS.
+
+Como o pacote conda não inclui modelos de idioma, o `eng.traineddata` vem do pacote pip
+`tessdata.eng`, e `placas/etapas/e7_motor_ocr.py` aponta o motor para essa pasta quando ela
+existe. Em uma instalação comum, o pacote não está presente e o motor usa a própria pasta padrão.
+
+A barra lateral da página mostra a versão realmente em uso — é ali que se confere se o ambiente
+publicado subiu com a versão esperada.
 Para conferir o estilo do código: `python -m pip install ruff && ruff check .`
 
 Consulte [o guia da apresentação](docs/GUIA_APRESENTACAO.md) e [a validação](docs/VALIDACAO.md).
