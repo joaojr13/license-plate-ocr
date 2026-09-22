@@ -1,9 +1,9 @@
-"""Etapa 7a — o adaptador do Tesseract: o único arquivo que fala com o motor.
+"""Etapa 7a — adaptador: valida a entrada, chama o Tesseract e traduz a resposta.
 
-Aqui ficam apenas a chamada ao OCR e a leitura da resposta. Nenhuma decisão
-sobre aceitar ou recusar um caractere acontece neste arquivo — essa política
-está em e7_decisao.py. A separação torna óbvio que trocar de motor de OCR
-significa reescrever este arquivo, e só ele.
+Este é o único arquivo que chama o motor externo. Uma resposta com vários
+símbolos é inválida e vira '?'; uma resposta com um símbolo é devolvida com
+sua confiança. Decidir se essa confiança basta é responsabilidade do roteiro
+e7_decisao.py, apoiado pelas regras de reconhecimento/evidencias.py.
 """
 import os
 import string
@@ -13,6 +13,7 @@ import pytesseract
 
 from placas.config import (FORMATOS, IDIOMA_OCR, MODO_OEM, PSM_CARACTERE_UNICO,
                            PSM_LINHA_CRUA, TEMPO_LIMITE_OCR)
+from placas.etapas.e6_escalas import preparar_escalas
 from placas.modelos import Leitura
 from placas.validacao import validar_entrada_cinza, validar_entrada_ocr
 
@@ -30,6 +31,7 @@ def alfabeto_por_posicao(indice: int, formato: str) -> str:
 
 
 def verificar_tesseract() -> str:
+    """Confere executável e idioma; devolve a versão mostrada pela interface."""
     caminho = os.environ.get("TESSERACT_CMD")
     if caminho:
         pytesseract.pytesseract.tesseract_cmd = caminho
@@ -43,13 +45,15 @@ def verificar_tesseract() -> str:
                            "instalar pytesseract pelo pip não instala o motor OCR.") from exc
 
 
-def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABETO,
-                         psm: int = PSM_CARACTERE_UNICO,
-                         referencia_binaria: np.ndarray | None = None,
-                         referencia_escala: np.ndarray | None = None) -> Leitura:
-    """Entrada: um recorte preparado na etapa 6. Saída: uma leitura individual."""
+def _validar_entrada_individual(imagem_individual: np.ndarray,
+                               referencia_binaria: np.ndarray | None,
+                               referencia_escala: np.ndarray | None) -> None:
+    """Escolhe a validação pela origem: máscara, recorte cinza ou escala menor.
+
+    A escala deve ser exatamente uma das imagens produzidas a partir do
+    caractere validado. Ter dimensões pequenas, por si só, não autoriza OCR.
+    """
     if referencia_escala is not None:
-        from placas.etapas.e6_escalas import preparar_escalas
         if referencia_binaria is not None or not any(
             np.array_equal(imagem_individual, imagem)
             for imagem in preparar_escalas(referencia_escala).values()
@@ -59,6 +63,36 @@ def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABE
         validar_entrada_ocr(imagem_individual)
     else:
         validar_entrada_cinza(imagem_individual, referencia_binaria)
+
+
+def _interpretar_resposta(dados: dict, permitidos: str) -> Leitura:
+    """Converte a resposta do motor, preservando o texto bruto para auditoria.
+
+    Ignora registros sem texto e mantém a menor confiança dos registros com
+    texto. Nunca corta uma resposta de vários símbolos para fingir um acerto.
+    """
+    tokens = []
+    for texto, confianca in zip(dados["text"], dados["conf"]):
+        texto_normalizado = str(texto).strip().upper()
+        if texto_normalizado:
+            tokens.append((texto_normalizado, float(confianca)))
+
+    bruto = "".join(texto for texto, _ in tokens)
+    menor_confianca = min((confianca for _, confianca in tokens), default=-1.0)
+    caractere = bruto if len(bruto) == 1 and bruto in permitidos else "?"
+    return Leitura(caractere, bruto, menor_confianca)
+
+
+def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABETO,
+                         psm: int = PSM_CARACTERE_UNICO,
+                         referencia_binaria: np.ndarray | None = None,
+                         referencia_escala: np.ndarray | None = None) -> Leitura:
+    """Entrada: um recorte preparado na etapa 6. Saída: uma leitura individual.
+
+    As referências só servem à validação. A única imagem enviada ao Tesseract
+    é imagem_individual, inclusive quando o modo de leitura é linha crua.
+    """
+    _validar_entrada_individual(imagem_individual, referencia_binaria, referencia_escala)
     if psm not in (PSM_CARACTERE_UNICO, PSM_LINHA_CRUA):
         raise ValueError("Modo de OCR não suportado.")
     # Mesmo no modo 13, a entrada validada contém somente um caractere.
@@ -68,10 +102,4 @@ def reconhecer_caractere(imagem_individual: np.ndarray, permitidos: str = ALFABE
                f"-c tessedit_char_whitelist={permitidos}",
         timeout=TEMPO_LIMITE_OCR,
     )
-    tokens = [(str(t).strip().upper(), float(conf))
-              for t, conf in zip(dados["text"], dados["conf"]) if str(t).strip()]
-    bruto = "".join(t for t, _ in tokens)
-    confianca = min((conf for _, conf in tokens), default=-1.0)
-    # Nunca corta uma resposta de vários caracteres para fingir um acerto.
-    valor = bruto if len(bruto) == 1 and bruto in permitidos else "?"
-    return Leitura(valor, bruto, confianca)
+    return _interpretar_resposta(dados, permitidos)

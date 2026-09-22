@@ -1,75 +1,37 @@
-"""Etapa 7b — as regras que decidem se uma leitura é aceita ou vira '?'.
+"""Etapa 7b — roteiro de reconhecimento e recuperação de um caractere.
 
-Nenhuma função aqui conversa com o Tesseract: todas as chamadas passam pelo
-adaptador e7_motor_ocr. O que este arquivo contém é a política — quantas
-respostas precisam concordar, o que conta como conflito e quando desistir.
-Ela é a mesma para todos os caracteres: nenhuma posição, letra esperada ou
-formato de placa é usado para desempatar uma resposta.
+Aqui se lê a ordem das tentativas: preparo padrão, variações e outro modo.
+As recuperações em cinza e em escalas menores são acionadas por reconhecimento/fluxo.py
+somente para leituras ainda inconclusivas. Cada representação decide com
+suas próprias respostas, mas mantém todas as tentativas no histórico.
+
+As chamadas individuais ficam em reconhecimento/tentativas.py; as regras
+que avaliam confiança e consenso ficam em reconhecimento/evidencias.py.
 """
 import numpy as np
 
-from placas.config import (CONFIANCA_MINIMA, FORMATOS, MINIMO_DE_CONCORDANCIAS,
-                           PSM_CARACTERE_UNICO, PSM_LINHA_CRUA, TOTAL_CARACTERES)
+from placas.config import (CONFIANCA_MINIMA, FORMATOS, PSM_LINHA_CRUA,
+                           TOTAL_CARACTERES)
 from placas.etapas import e7_motor_ocr
-from placas.etapas.e6_escalas import preparar_escalas
 from placas.etapas.e6_variacoes import gerar_variacoes
 from placas.etapas.e7_motor_ocr import ALFABETO
-from placas.modelos import EntradaCinza, Leitura, TentativaOCR
-
-# --- Vocabulário da decisão: quatro perguntas puras sobre um histórico -------
-
-
-def _fortes(tentativas: list[TentativaOCR]) -> list[TentativaOCR]:
-    """Tentativas com resposta única e confiança suficiente para pesar."""
-    return [t for t in tentativas
-            if t.caractere != "?" and t.confianca >= CONFIANCA_MINIMA]
+from placas.modelos import EntradaCinza, Leitura
+from placas.reconhecimento import evidencias, tentativas
 
 
-def _respostas(fortes: list[TentativaOCR]) -> set[str]:
-    return {t.caractere for t in fortes}
+def reconhecer_caracteres(entradas: list[np.ndarray], formato: str = "livre") -> list[Leitura]:
+    """Recebe sete recortes, reconhece um por vez e preserva a ordem de leitura."""
+    if len(entradas) != TOTAL_CARACTERES:
+        raise ValueError("O OCR exige sete recortes individuais preparados.")
+    if formato not in FORMATOS:
+        raise ValueError("Formato desconhecido.")
+    e7_motor_ocr.verificar_tesseract()
 
-
-def _ha_consenso(fortes: list[TentativaOCR]) -> bool:
-    """Duas ou mais respostas fortes, todas iguais: é o que autoriza aceitar."""
-    return (len(fortes) >= MINIMO_DE_CONCORDANCIAS
-            and len(_respostas(fortes)) == 1)
-
-
-def _ha_conflito(fortes: list[TentativaOCR]) -> bool:
-    """Respostas fortes que discordam entre si: o sistema se abstém."""
-    return len(_respostas(fortes)) > 1
-
-
-def _falta_evidencia_sem_conflito(fortes: list[TentativaOCR]) -> bool:
-    """Ainda não há duas concordâncias, mas também não há conflito forte."""
-    return (len(_respostas(fortes)) <= 1
-            and len(fortes) < MINIMO_DE_CONCORDANCIAS)
-
-
-def _aceitar(fortes: list[TentativaOCR], historico: list[TentativaOCR],
-             motivo: str) -> Leitura:
-    """A confiança registrada é a MENOR entre os apoiadores, não a maior."""
-    escolhida = fortes[0]
-    return Leitura(escolhida.caractere, escolhida.bruto,
-                   min(t.confianca for t in fortes), historico, motivo)
-
-
-# --- Chamadas ao motor, sempre com um caractere por vez ----------------------
-
-
-def _tentar(nome: str, imagem: np.ndarray, permitidos: str,
-            psm: int = PSM_CARACTERE_UNICO) -> TentativaOCR:
-    leitura = e7_motor_ocr.reconhecer_caractere(imagem, permitidos, psm=psm)
-    return TentativaOCR(nome, leitura.caractere, leitura.bruto, leitura.confianca, psm=psm)
-
-
-def _tentar_em_cinza(nome: str, entrada: EntradaCinza, permitidos: str) -> TentativaOCR:
-    leitura = e7_motor_ocr.reconhecer_caractere(
-        entrada.imagem, permitidos, referencia_binaria=entrada.referencia)
-    return TentativaOCR(nome, leitura.caractere, leitura.bruto, leitura.confianca)
-
-
-# --- As três decisões --------------------------------------------------------
+    leituras = []
+    for indice, imagem in enumerate(entradas):
+        permitidos = e7_motor_ocr.alfabeto_por_posicao(indice, formato)
+        leituras.append(reconhecer_com_tentativas(imagem, permitidos))
+    return leituras
 
 
 def reconhecer_com_tentativas(entrada: np.ndarray, permitidos: str = ALFABETO) -> Leitura:
@@ -80,30 +42,36 @@ def reconhecer_com_tentativas(entrada: np.ndarray, permitidos: str = ALFABETO) -
     todos os caracteres; nenhuma posição ou letra esperada desempata respostas.
     """
     primeira = e7_motor_ocr.reconhecer_caractere(entrada, permitidos)
-    historico = [TentativaOCR("padrao", primeira.caractere, primeira.bruto, primeira.confianca)]
+    historico = [tentativas.registrar_resposta("padrao", primeira)]
     if primeira.caractere != "?" and primeira.confianca >= CONFIANCA_MINIMA:
         primeira.tentativas = historico
         primeira.motivo = "Leitura padrão com confiança suficiente."
         return primeira
 
     variacoes = gerar_variacoes(entrada)
-    historico += [_tentar(nome, imagem, permitidos)
+    historico += [tentativas.tentar_preparo_binario(nome, imagem, permitidos)
                   for nome, imagem in variacoes.items() if nome != "padrao"]
 
     # Só muda o modo se os preparos no modo 10 ainda não resolveram a leitura.
     # Conflitos fortes são preservados; um novo modo não deve escondê-los.
-    if _falta_evidencia_sem_conflito(_fortes(historico)):
-        historico += [_tentar(nome, imagem, permitidos, PSM_LINHA_CRUA)
-                      for nome, imagem in variacoes.items()]
+    fortes = evidencias.selecionar_respostas_fortes(historico)
+    if evidencias.falta_evidencia_sem_conflito(fortes):
+        for nome, imagem in variacoes.items():
+            tentativa = tentativas.tentar_preparo_binario(nome, imagem, permitidos,
+                                                          PSM_LINHA_CRUA)
+            historico.append(tentativa)
 
-    fortes = _fortes(historico)
-    if _ha_consenso(fortes):
-        return _aceitar(fortes, historico,
-                        f"Concordância de {len(fortes)} preparos, "
-                        "sem conflito de confiança suficiente.")
-    motivo = ("Respostas conflitantes com confiança suficiente." if _ha_conflito(fortes)
-              else "Evidência insuficiente: são necessários dois preparos "
-                   "concordantes com confiança >= 60.")
+    fortes = evidencias.selecionar_respostas_fortes(historico)
+    if evidencias.ha_consenso(fortes):
+        motivo = (f"Concordância de {len(fortes)} preparos, "
+                  "sem conflito de confiança suficiente.")
+        return evidencias.construir_leitura_aceita(fortes, historico, motivo)
+
+    if evidencias.ha_conflito(fortes):
+        motivo = "Respostas conflitantes com confiança suficiente."
+    else:
+        motivo = ("Evidência insuficiente: são necessários dois preparos "
+                  "concordantes com confiança >= 60.")
     return Leitura("?", primeira.bruto, -1.0, historico, motivo)
 
 
@@ -117,28 +85,17 @@ def recuperar_com_cinza(leitura: Leitura, variacoes: dict[str, EntradaCinza],
     """
     if leitura.caractere != "?":
         return leitura
-    novas = [_tentar_em_cinza(nome, entrada, permitidos)
+    novas = [tentativas.tentar_preparo_cinza(nome, entrada, permitidos)
              for nome, entrada in variacoes.items()]
     historico = leitura.tentativas + novas
-    fortes = _fortes(novas)
-    if _ha_consenso(fortes):
-        return _aceitar(fortes, historico, 'Recuperado por concordância entre margens '
-                                           'em tons de cinza; binário inconclusivo.')
+    fortes = evidencias.selecionar_respostas_fortes(novas)
+    if evidencias.ha_consenso(fortes):
+        motivo = ("Recuperado por concordância entre margens "
+                  "em tons de cinza; binário inconclusivo.")
+        return evidencias.construir_leitura_aceita(fortes, historico, motivo)
     leitura.tentativas = historico
     leitura.motivo += " Tons de cinza também inconclusivos."
     return leitura
-
-
-def reconhecer_caracteres(entradas: list[np.ndarray], formato: str = "livre") -> list[Leitura]:
-    """Entrada: sete recortes da etapa 6. Saída: leituras, ainda sem concatenar."""
-    if len(entradas) != TOTAL_CARACTERES:
-        raise ValueError("O OCR exige sete recortes individuais preparados.")
-    if formato not in FORMATOS:
-        raise ValueError("Formato desconhecido.")
-    e7_motor_ocr.verificar_tesseract()
-    return [reconhecer_com_tentativas(imagem,
-                                      e7_motor_ocr.alfabeto_por_posicao(indice, formato))
-            for indice, imagem in enumerate(entradas)]
 
 
 def recuperar_com_escalas(leitura: Leitura, entrada: np.ndarray, permitidos: str) -> Leitura:
@@ -149,18 +106,12 @@ def recuperar_com_escalas(leitura: Leitura, entrada: np.ndarray, permitidos: str
     """
     if leitura.caractere != "?":
         return leitura
-    novas = []
-    for nome, imagem in preparar_escalas(entrada).items():
-        for psm in (PSM_CARACTERE_UNICO, PSM_LINHA_CRUA):
-            resposta = e7_motor_ocr.reconhecer_caractere(
-                imagem, permitidos, psm=psm, referencia_escala=entrada)
-            novas.append(TentativaOCR(nome, resposta.caractere, resposta.bruto,
-                                      resposta.confianca, psm=psm))
+    novas = tentativas.tentar_escalas_menores(entrada, permitidos)
     historico = leitura.tentativas + novas
-    fortes = _fortes(novas)
-    if _ha_consenso(fortes) and len({t.variacao for t in fortes}) >= 2:
-        return _aceitar(fortes, historico,
-                       "Recuperado por concordância entre duas escalas, sem conflito forte.")
+    fortes = evidencias.selecionar_respostas_fortes(novas)
+    if evidencias.ha_consenso_em_escalas_distintas(fortes):
+        motivo = "Recuperado por concordância entre duas escalas, sem conflito forte."
+        return evidencias.construir_leitura_aceita(fortes, historico, motivo)
     leitura.tentativas = historico
     leitura.motivo += " Escalas menores também inconclusivas."
     return leitura

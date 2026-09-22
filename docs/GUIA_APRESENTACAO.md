@@ -3,6 +3,7 @@
 Comece por `placas/pipeline.py`: ele tem duas funções, `localizar()` e `reconhecer()`, e cada
 linha delas leva ao arquivo da etapa correspondente em `placas/etapas/`, numerado de e1 a e8.
 O código usa OpenCV para localizar/segmentar e somente Tesseract para reconhecer caracteres.
+Para localizar cada responsabilidade e entender os dados, leia também o [mapa do código](MAPA_DO_CODIGO.md).
 
 Três arquivos ajudam a responder perguntas durante a apresentação:
 
@@ -53,7 +54,8 @@ boxes individuais, preservando detalhes que a binarização pode eliminar.
 
 `reconhecer_caractere`, em `placas/etapas/e7_motor_ocr.py`, é o único ponto que chama
 `pytesseract.image_to_data`. As regras que decidem aceitar ou recusar a resposta estão
-separadas, em `placas/etapas/e7_decisao.py`, e nunca conversam com o motor.
+separadas, em `placas/reconhecimento/evidencias.py`. `e7_decisao.py` aplica essas regras
+e solicita as tentativas; `reconhecimento/fluxo.py` ordena binário, cinza e escalas.
 PSM 10 indica símbolo único; PSM 13 é alternativa de interpretação. Ambos recebem somente
 um caractere. O modo, sozinho, não garante o cumprimento da restrição: os recortes são validados antes.
 

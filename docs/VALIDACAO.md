@@ -17,10 +17,25 @@ pontuação, as mensagens de erro e o hash de cada imagem intermediária e expor
 | Placa inclinada Honda WR-V | WRV2021 |
 | Exemplo sintético salvo | ABC1D23 |
 | Sete recortes inclinados enviados pelo usuário | TEP3A12 |
+| Placa em perspectiva (testee12.jpg) | ABC1D34 |
+| Fiat vermelho (foto enviada pelo WhatsApp) | NUJ9549 |
 
 A placa paraguaia é recuperada usando tons de cinza sem seleção de formato. A foto do Honda já
 contém um retângulo verde desenhado no arquivo fornecido; o teste cobre essa versão. O caso
 TEP3A12 foi validado a partir dos recortes exportados, não da foto original do veículo.
+
+## Refatoração por responsabilidade — 22/09/2026
+
+Na branch `refatoracao-responsabilidades-didaticas`, a suíte existente passou com **59 testes**.
+Além disso, uma execução da versão anterior (commit `b8952a5`) foi comparada à nova versão
+em seis imagens completas: escura, paraguaia, Honda, sintética, testee12 e Fiat.
+Foram idênticos os retângulos escolhidos, candidatas, máscaras, caixas dos caracteres,
+pontuações, texto, histórico de tentativas e pixels das imagens exportadas.
+
+A comparação foi feita no mesmo ambiente local com Tesseract 5.5.3. As duas novas fotos
+completas vieram de Downloads; os três recortes de regressão A/9 continuam versionados em
+`tests/fixtures/recortes_escalas/`. Essa comparação não comprova equivalência entre sistemas
+operacionais ou modelos de idioma diferentes.
 
 ## O que os testes demonstram
 

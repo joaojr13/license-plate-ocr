@@ -1,37 +1,34 @@
-"""Os blocos visuais da página principal, na ordem em que aparecem.
+"""Entrada e controles da página: receber a foto, inspecionar e pedir o OCR.
 
-app.py fica com o roteiro — entrada, localização, segmentação, OCR, resultado
-— e cada bloco desenhado mora em uma função daqui. A ordem em que as funções
-são chamadas é a ordem dos elementos na tela.
+``app.py`` organiza o roteiro. As funções daqui desenham os controles e
+recortes principais; ``sessao`` cuida da reutilização de resultados e
+``relatorio`` apresenta as leituras e os downloads. A página chama cada
+módulo diretamente para deixar explícita a responsabilidade de cada bloco.
 """
-import hashlib
 from pathlib import Path
 
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from interface import textos
 from placas.etapas import e7_motor_ocr
 from placas.etapas.e6_normalizacao import preparar_caractere
 from placas.etapas.e6_recortes import preparar_recortes
-from placas.imagem import ler_imagem
 from placas.modelos import Localizacao, Segmentacao
-from placas.pipeline import localizar, reconhecer
-from placas.saida.exportacao import imagens_das_tentativas, montar_pacote_zip
+from placas.pipeline import reconhecer
 from placas.saida.visualizacao import desenhar_localizacao, desenhar_segmentacao
 
 EXEMPLO = Path(__file__).resolve().parents[1] / "examples" / "veiculo_sintetico.png"
-# Muda quando a segmentação muda, para invalidar o cache de execuções antigas.
-VERSAO_DA_SEGMENTACAO = "candidatas-morfologia-v4"
-VERSAO_DO_OCR = b"tesseract-escalas-v2"
 
 
 def configurar_pagina() -> None:
+    """Define a apresentação geral antes de criar os demais controles."""
     st.set_page_config(page_title="Leitura de placas", page_icon="🚘", layout="wide")
     st.title("Reconhecimento de placas veiculares")
     st.caption("Visão computacional passo a passo · OpenCV + OCR individual")
 
 
-def barra_lateral() -> tuple[object, bool, bool]:
+def barra_lateral() -> tuple[UploadedFile | None, bool, bool]:
     """Devolve o arquivo enviado, se o exemplo foi pedido e se o motor responde."""
     with st.sidebar:
         st.header("Imagem de entrada")
@@ -52,7 +49,7 @@ def barra_lateral() -> tuple[object, bool, bool]:
     return arquivo, demonstracao, motor_disponivel
 
 
-def obter_imagem(arquivo, demonstracao: bool) -> bytes:
+def obter_imagem(arquivo: UploadedFile | None, demonstracao: bool) -> bytes:
     """Sem foto nem exemplo, apresenta o fluxo e interrompe a página."""
     if arquivo is not None:
         return arquivo.getvalue()
@@ -65,30 +62,8 @@ def obter_imagem(arquivo, demonstracao: bool) -> bytes:
     st.stop()
 
 
-@st.cache_data(show_spinner="Localizando a placa e separando os caracteres…", max_entries=5)
-def _localizar_em_cache(dados: bytes, versao_segmentacao: str = VERSAO_DA_SEGMENTACAO):
-    """Executa as etapas 1–5 dos módulos de processamento e guarda o resultado."""
-    return localizar(ler_imagem(dados))
-
-
-def localizar_placa(conteudo: bytes) -> Localizacao:
-    """Etapas 1–5. Uma imagem sem placa plausível interrompe a página."""
-    try:
-        return _localizar_em_cache(conteudo)
-    except ValueError as exc:
-        st.error(str(exc))
-        st.stop()
-
-
-def esquecer_resultado_de_outra_imagem(conteudo: bytes, formato: str) -> None:
-    """O resultado guardado só vale para a mesma imagem, formato e versão do OCR."""
-    chave = hashlib.sha256(conteudo + formato.encode() + VERSAO_DO_OCR).hexdigest()
-    if st.session_state.get("chave") != chave:
-        st.session_state["chave"] = chave
-        st.session_state.pop("resultado", None)
-
-
 def mostrar_regiao_e_segmentacao(localizacao: Localizacao) -> None:
+    """Compara a região localizada com a separação dos símbolos já calculada."""
     segmentacao = localizacao.segmentacao
     esquerda, direita = st.columns([3, 2])
     with esquerda:
@@ -114,9 +89,9 @@ def mostrar_entradas_do_ocr(segmentacao: Segmentacao, valida: bool) -> None:
         return
     entradas = (preparar_recortes(segmentacao) if valida
                 else [preparar_caractere(c) for c in segmentacao.caracteres])
-    for i, (coluna, entrada) in enumerate(zip(st.columns(len(entradas)), entradas)):
+    for posicao, (coluna, entrada) in enumerate(zip(st.columns(len(entradas)), entradas), start=1):
         with coluna:
-            st.image(entrada, caption=f"Caractere {i+1}", width="stretch")
+            st.image(entrada, caption=f"Caractere {posicao}", width="stretch")
 
 
 def botao_de_reconhecimento(segmentacao: Segmentacao, formato: str, habilitado: bool) -> None:
@@ -129,35 +104,3 @@ def botao_de_reconhecimento(segmentacao: Segmentacao, formato: str, habilitado: 
             st.session_state["resultado"] = reconhecer(segmentacao, formato)
     except (ValueError, RuntimeError, OSError) as exc:
         st.error(f"Não foi possível concluir o OCR: {exc}")
-
-
-def mostrar_resultado(segmentacao: Segmentacao, resultado: dict) -> None:
-    st.subheader("4 · Resultado consolidado")
-    st.metric("Texto reconhecido", resultado["texto"])
-    st.code(f'caracteres = {resultado["caracteres"]!r}\n'
-            f'placas = {resultado["placas"]!r}', language="python")
-    for aviso in resultado["avisos"]:
-        st.warning(aviso)
-    st.dataframe([
-        {"Posição": i, "Caractere": leitura["caractere"], "Confiança": leitura["confianca"],
-         "Tentativas": len(leitura["tentativas"]), "Decisão": leitura["motivo"]}
-        for i, leitura in enumerate(resultado["leituras"], 1)
-    ], hide_index=True, width="stretch")
-    st.caption(f'{resultado["quantidade_chamadas_ocr"]} chamadas individuais ao OCR. '
-               'Confira os candidatos e cada tentativa na etapa 7 do passo a passo.')
-    st.caption(textos.RESULTADO_CONFIANCA)
-    _mostrar_downloads(segmentacao, resultado)
-
-
-def _mostrar_downloads(segmentacao: Segmentacao, resultado: dict) -> None:
-    """Exporta cada entrada realmente enviada, incluindo as tentativas adicionais."""
-    imagens = imagens_das_tentativas(segmentacao, resultado)
-    adicionais = {nome: imagem for nome, imagem in imagens.items()
-                  if "cinza_" in nome or "escala_" in nome}
-    if adicionais:
-        with st.expander("Recortes em tons de cinza e escalas enviados nas tentativas adicionais"):
-            for nome, imagem in adicionais.items():
-                st.image(imagem, caption=nome)
-    st.download_button("Baixar resultado e recortes",
-                       montar_pacote_zip(segmentacao, resultado),
-                       "reconhecimento.zip", "application/zip")

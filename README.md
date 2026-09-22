@@ -23,6 +23,9 @@ As versões fixadas do ambiente de referência estão em `requirements-lock.txt`
 
 ## Como o código está organizado
 
+Para estudar o algoritmo, comece pelo **[mapa do código](docs/MAPA_DO_CODIGO.md)**:
+ele explica a ordem de leitura, os dados que passam entre funções e os termos de processamento.
+
 ```
 app.py                      a página, em uma tela: cada linha é uma etapa
 main.py                     a mesma leitura pelo terminal
@@ -32,12 +35,18 @@ placas/
   modelos.py                as estruturas de dados compartilhadas
   imagem.py                 leitura do arquivo e orientação EXIF
   validacao.py              as recusas que protegem o OCR
-  etapas/                   uma etapa por arquivo, de e1 a e8
+  etapas/                   entradas das oito etapas e preparos individuais da etapa 6
+  localizacao/              geração de retângulos candidatos a placa
+  segmentacao/              binarização, componentes, alinhamento e pontuação
+  reconhecimento/           ordem das recuperações, chamadas e regras de evidência
   saida/                    desenho das marcações e exportação dos recortes
 interface/
   componentes.py            os blocos visuais da página principal
   passos.py                 a estrutura das oito seções do passo a passo
   textos.py                 os textos didáticos, fora do código
+  candidatas.py             galerias, máscaras e comparação visual das regiões
+  relatorio.py              resultado, histórico e downloads
+  sessao.py                 cache e resultado associado à imagem atual
 ```
 
 Comece por `placas/pipeline.py`: ele tem duas funções, `localizar()` e `reconhecer()`,
@@ -53,13 +62,19 @@ e cada linha delas leva ao arquivo da etapa correspondente.
 | 4 | Avaliar regiões e escolher a melhor candidata | `placas/etapas/e4_localizacao.py` |
 | 5 | Separar componentes e encontrar a linha de caracteres | `placas/etapas/e5_segmentacao.py` |
 | 6 | Validar recortes, normalizar e corrigir inclinação | `placas/etapas/e6_recortes.py` |
-| 7 | Reconhecer cada caractere pelo Tesseract | `placas/etapas/e7_decisao.py` |
+| 7 | Reconhecer cada caractere e coordenar recuperações | `placas/reconhecimento/fluxo.py` |
 | 8 | Concatenar, formar arrays e emitir avisos | `placas/etapas/e8_resultado.py` |
 
-A etapa 6 se apoia em três arquivos vizinhos: `e6_normalizacao.py` põe o símbolo no formato
-padrão, `e6_inclinacao.py` corrige o ângulo e `e6_variacoes.py` gera os preparos alternativos.
-A etapa 7 é dividida em dois: `e7_motor_ocr.py` é o único arquivo que fala com o Tesseract, e
-`e7_decisao.py` contém as regras que aceitam ou recusam uma leitura, sem chamar o motor.
+A etapa 4 usa `localizacao/candidatas.py` para propor regiões. A etapa 5 coordena os módulos
+de `segmentacao/`: gerar máscaras, extrair componentes, escolher a linha e avaliar as alternativas.
+
+A etapa 6 se apoia nos arquivos `e6_normalizacao.py`, `e6_inclinacao.py`, `e6_variacoes.py`
+e `e6_escalas.py`: formato padrão, ângulo, margens/afinamento e reduções individuais.
+
+A etapa 7 começa em `reconhecimento/fluxo.py`, que ordena binário, cinza e escalas.
+`e7_decisao.py` coordena as decisões de cada representação; `reconhecimento/evidencias.py`
+contém regras puras de aceitação. `reconhecimento/tentativas.py` registra chamadas pelo adaptador
+`e7_motor_ocr.py`, único ponto que chama o Tesseract. Nenhuma dessas chamadas recebe a placa inteira.
 
 `placas/saida/visualizacao.py` desenha as marcações e `placas/saida/exportacao.py` reconstrói
 as entradas do OCR para o download.
@@ -115,7 +130,8 @@ Todos os limiares e tamanhos citados acima estão em `placas/config.py`, com um 
 de uma linha cada: é lá que se ajusta o comportamento, não no meio da lógica.
 Para conferir o estilo do código: `python -m pip install ruff && ruff check .`
 
-Consulte [o guia da apresentação](docs/GUIA_APRESENTACAO.md) e [a validação](docs/VALIDACAO.md).
+Consulte [o mapa do código](docs/MAPA_DO_CODIGO.md), [o guia da apresentação](docs/GUIA_APRESENTACAO.md)
+e [a validação](docs/VALIDACAO.md).
 O protótipo espera sete caracteres em uma linha. Reflexos, desfoque, perspectiva acentuada e
 caracteres unidos podem impedir a leitura. A correção de inclinação não é uma retificação completa
 de perspectiva. O exemplo sintético demonstra o fluxo, mas não comprova precisão em fotografias.

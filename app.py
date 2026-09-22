@@ -8,15 +8,16 @@ tudo passa por placas/pipeline.py.
 """
 import streamlit as st
 
-from interface import componentes, textos
+from interface import componentes, relatorio, sessao, textos
 from interface.passos import exibir_passos
+from placas.modelos import Segmentacao
 from placas.validacao import validar_segmentacao
 
 # A página usa alfabeto livre; o CLI aceita 'antiga' e 'mercosul' (main.py).
 FORMATO = "livre"
 
 
-def segmentacao_valida(segmentacao) -> bool:
+def segmentacao_valida(segmentacao: Segmentacao) -> bool:
     """Avisa na tela quando os recortes não podem ir ao OCR, sem interromper."""
     try:
         validar_segmentacao(segmentacao)
@@ -30,9 +31,9 @@ componentes.configurar_pagina()
 arquivo, demonstracao, motor_disponivel = componentes.barra_lateral()
 conteudo = componentes.obter_imagem(arquivo, demonstracao)
 
-localizacao = componentes.localizar_placa(conteudo)          # Etapas 1–5.
+localizacao = sessao.localizar_placa(conteudo)                 # Etapas 1–5.
 segmentacao = localizacao.segmentacao
-componentes.esquecer_resultado_de_outra_imagem(conteudo, FORMATO)
+sessao.esquecer_resultado_de_outra_imagem(conteudo, FORMATO)
 
 componentes.mostrar_regiao_e_segmentacao(localizacao)
 valida = segmentacao_valida(segmentacao)
@@ -43,7 +44,7 @@ componentes.botao_de_reconhecimento(                          # Etapas 6–8.
 
 resultado = st.session_state.get("resultado")
 if resultado is not None:
-    componentes.mostrar_resultado(segmentacao, resultado)
+    relatorio.mostrar_resultado(segmentacao, resultado)
 
 exibir_passos(localizacao, valida, motor_disponivel, resultado)
 st.caption(textos.RODAPE)
